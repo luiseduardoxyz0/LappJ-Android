@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+*.log
+.env
+android/
+ios/
+*.so
+*.a
+*.jar

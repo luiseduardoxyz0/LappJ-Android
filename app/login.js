@@ -1,0 +1,388 @@
+import { useTheme } from '@/constants/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+export default function LoginScreen() {
+  const { theme, isDark } = useTheme();
+  const router = useRouter();
+  const [userType, setUserType] = useState('motorista');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
+
+  const s = styles(theme, isDark);
+
+  const handleLogin = () => {
+    if (email && password) {
+      if (userType === 'motorista') {
+        router.replace('(tabs)');
+      } else {
+        router.replace('(tabs)');
+      }
+    } else {
+      alert('Por favor, preencha e-mail e senha');
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    console.log('Google login');
+  };
+
+  const handleMicrosoftLogin = () => {
+    console.log('Microsoft login');
+  };
+
+  const handleSupportContact = () => {
+    console.log('Contate o Suporte LappJ');
+  };
+
+  return (
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={s.container}
+    >
+      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Header com logo */}
+        <View style={s.headerContainer}>
+          <View style={s.logoBox}>
+            <Ionicons name="car" size={28} color="white" />
+          </View>
+          <Text style={s.logoText}>LappJ</Text>
+        </View>
+
+        {/* Subtítulo */}
+        <Text style={s.subtitle}>GESTÃO DE JORNADA E ENTREGAS</Text>
+
+        {/* Card principal */}
+        <View style={s.card}>
+          {/* Toggle de perfil */}
+          <View style={s.profileToggleContainer}>
+            <TouchableOpacity
+              style={[
+                s.toggleButton,
+                userType === 'motorista' && s.toggleButtonActive,
+              ]}
+              onPress={() => setUserType('motorista')}
+            >
+              <Text
+                style={[
+                  s.toggleButtonText,
+                  userType === 'motorista' && s.toggleButtonTextActive,
+                ]}
+              >
+                Motorista
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                s.toggleButton,
+                userType === 'coordenador' && s.toggleButtonActive,
+              ]}
+              onPress={() => setUserType('coordenador')}
+            >
+              <Text
+                style={[
+                  s.toggleButtonText,
+                  userType === 'coordenador' && s.toggleButtonTextActive,
+                ]}
+              >
+                Coordenador
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Label Email */}
+          <Text style={s.label}>E-MAIL CORPORATIVO</Text>
+
+          {/* Input Email */}
+          <View style={s.inputContainer}>
+            <Ionicons name="mail" size={20} color={theme.textMuted} />
+            <TextInput
+              style={s.input}
+              placeholder="nome@lappj.com"
+              placeholderTextColor={theme.textMuted}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              editable={true}
+            />
+          </View>
+
+          {/* Label Senha */}
+          <View style={s.passwordLabelContainer}>
+            <Text style={s.label}>SENHA DE ACESSO</Text>
+            <TouchableOpacity onPress={() => console.log('Esqueci minha senha')}>
+              <Text style={s.forgotPasswordLink}>Esqueci minha senha</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Input Senha */}
+          <View style={s.inputContainer}>
+            <Ionicons name="lock-closed" size={20} color={theme.textMuted} />
+            <TextInput
+              style={s.input}
+              placeholder="••••••••"
+              placeholderTextColor={theme.textMuted}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!passwordVisible}
+            />
+            <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
+              <Ionicons
+                name={passwordVisible ? 'eye' : 'eye-off'}
+                size={20}
+                color={theme.textMuted}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Botão Entrar */}
+          <TouchableOpacity style={s.loginButton} onPress={handleLogin}>
+            <Text style={s.loginButtonText}>Entrar na Jornada</Text>
+            <Ionicons name="arrow-forward" size={20} color="white" />
+          </TouchableOpacity>
+
+          {/* Divisor OU CONTINUE COM */}
+          <View style={s.dividerContainer}>
+            <View style={s.dividerLine} />
+            <Text style={s.dividerText}>OU CONTINUE COM</Text>
+            <View style={s.dividerLine} />
+          </View>
+
+          {/* Botões Google e Microsoft */}
+          <View style={s.socialButtonsContainer}>
+            <TouchableOpacity style={s.socialButton} onPress={handleGoogleLogin}>
+              <Ionicons name="logo-google" size={24} color="#F5A623" />
+              <Text style={s.socialButtonText}>Google</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.socialButton} onPress={handleMicrosoftLogin}>
+              <Ionicons name="logo-microsoft" size={24} color="#00A4EF" />
+              <Text style={s.socialButtonText}>Microsoft</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Link de suporte */}
+        <View style={s.supportContainer}>
+          <Text style={s.supportTextMuted}>Problemas no acesso?</Text>
+          <TouchableOpacity onPress={handleSupportContact}>
+            <Text style={s.supportLink}>Contate o Suporte LappJ</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Footer */}
+        <View style={s.footer}>
+          <Text style={s.footerText}>© 2026 LAPPJ LOGISTICS</Text>
+          <Text style={s.footerVersion}>VERSÃO 1.0.0-BETA</Text>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = (theme, isDark) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingHorizontal: 16,
+      paddingVertical: 20,
+      justifyContent: 'space-between',
+    },
+    headerContainer: {
+      alignItems: 'center',
+      marginTop: 20,
+      marginBottom: 8,
+    },
+    logoBox: {
+      width: 56,
+      height: 56,
+      borderRadius: 14,
+      backgroundColor: theme.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    logoText: {
+      fontSize: 32,
+      fontWeight: '700',
+      color: theme.primary,
+    },
+    subtitle: {
+      fontSize: 13,
+      fontWeight: '600',
+      letterSpacing: 2,
+      color: theme.textSecondary,
+      textAlign: 'center',
+      marginBottom: 28,
+    },
+    card: {
+      backgroundColor: theme.surface,
+      borderRadius: 16,
+      paddingHorizontal: 20,
+      paddingVertical: 24,
+      borderWidth: 1,
+      borderColor: isDark ? theme.border : theme.border,
+    },
+    profileToggleContainer: {
+      flexDirection: 'row',
+      marginBottom: 24,
+      backgroundColor: isDark ? theme.surfaceSecondary : '#F5F6FA',
+      borderRadius: 12,
+      padding: 4,
+    },
+    toggleButton: {
+      flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    toggleButtonActive: {
+      backgroundColor: isDark ? theme.surface : '#FFFFFF',
+      borderWidth: 1,
+      borderColor: isDark ? theme.border : theme.border,
+    },
+    toggleButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    toggleButtonTextActive: {
+      color: theme.primary,
+    },
+    label: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1.5,
+      color: theme.textMuted,
+      marginBottom: 8,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.inputBackground,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      marginBottom: 16,
+      height: 50,
+      borderWidth: 1,
+      borderColor: 'transparent',
+    },
+    input: {
+      flex: 1,
+      marginHorizontal: 10,
+      fontSize: 15,
+      color: theme.textPrimary,
+    },
+    passwordLabelContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    forgotPasswordLink: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.primary,
+    },
+    loginButton: {
+      backgroundColor: theme.primary,
+      borderRadius: 12,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 20,
+      marginBottom: 24,
+    },
+    loginButtonText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      marginRight: 8,
+    },
+    dividerContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginVertical: 20,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: theme.border,
+    },
+    dividerText: {
+      marginHorizontal: 12,
+      fontSize: 12,
+      fontWeight: '600',
+      letterSpacing: 1,
+      color: theme.textSecondary,
+    },
+    socialButtonsContainer: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 16,
+    },
+    socialButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: isDark ? theme.surfaceSecondary : '#F5F6FA',
+    },
+    socialButtonText: {
+      marginLeft: 8,
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.textPrimary,
+    },
+    supportContainer: {
+      alignItems: 'center',
+      marginVertical: 20,
+    },
+    supportTextMuted: {
+      fontSize: 14,
+      color: theme.textMuted,
+      marginBottom: 4,
+    },
+    supportLink: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.primary,
+    },
+    footer: {
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    footerText: {
+      fontSize: 12,
+      color: theme.textMuted,
+      marginBottom: 2,
+    },
+    footerVersion: {
+      fontSize: 11,
+      color: theme.textMuted,
+      letterSpacing: 0.5,
+    },
+  });
