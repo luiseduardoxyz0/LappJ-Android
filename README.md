@@ -1,50 +1,116 @@
-# Welcome to your Expo app 👋
+# 🚚 LappJ — Gestão de Jornada e Entregas
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+> Projeto desenvolvido para a disciplina de **Linguagens e Técnicas de Programação IV**
 
-## Get started
+---
 
-1. Install dependencies
+## 📱 Sobre o Projeto
 
-   ```bash
-   npm install
-   ```
+O **LappJ** é um aplicativo mobile de gestão de jornada e entregas voltado para motoristas e coordenadores de frota. O app permite o controle em tempo real da jornada de trabalho, acompanhamento de entregas do dia e visualização de rotas no mapa.
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 👥 Perfis de Usuário
 
-In the output, you'll find options to open the app in a
+### 🚛 Motorista
+- Registra eventos da jornada (início, almoço, espera e fim)
+- Visualiza a lista de entregas do dia com status em tempo real
+- Navega pelo mapa até os pontos de entrega
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 🗂️ Coordenador
+- Monitora cargas ativas e motoristas em rota
+- Visualiza atrasos críticos
+- Gerencia e cria novas cargas
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## ✅ Requisitos Funcionais
 
-When you're ready, run:
+| ID | Descrição |
+|----|-----------|
+| RF01 | Autenticação com diferenciação entre perfil Motorista e Coordenador |
+| RF02 | Controle de jornada: Início, Almoço, Fim do Almoço, Espera, Fim da Espera e Fim da Jornada |
+| RF03 | Listagem de entregas do dia com cliente, pedido, endereço, ETA e status |
+| RF04 | Mapa integrado com rota até o ponto de entrega |
+| RF05 | Painel do coordenador com visualização e gestão de cargas e motoristas |
+
+## ⚙️ Requisitos Não Funcionais
+
+| ID | Descrição |
+|----|-----------|
+| RNF01 | Desenvolvido para Android com React Native + Expo |
+| RNF02 | Permissão de GPS para funcionamento do mapa |
+| RNF03 | Conexão com internet para sincronização de dados com a API |
+
+---
+
+## 🛠️ Tecnologias Utilizadas
+
+- [React Native](https://reactnative.dev/)
+- [Expo](https://expo.dev/)
+- [React Navigation](https://reactnavigation.org/)
+- [TypeScript](https://www.typescriptlang.org/)
+
+---
+
+## 🎨 Telas do App
+
+| Tela | Descrição |
+|------|-----------|
+| Login | Autenticação com seleção de perfil |
+| Dashboard Motorista | Relógio, status da jornada e ações de controle |
+| Lista de Entregas | Entregas do dia com status e ETA |
+| Mapa | Navegação até o ponto de entrega |
+| Painel Coordenador | Métricas e gestão de motoristas |
+
+O app conta com **modo claro e escuro**.
+
+---
+
+## 🚀 Como Executar
+
+### Pré-requisitos
+- Node.js (LTS)
+- Expo CLI
+- Android Studio com emulador configurado
+
+### Instalação
 
 ```bash
-npm run reset-project
+# Clonar o repositório
+git clone https://github.com/luiseduardoxyz0/LappJ-Android.git
+
+# Entrar na pasta
+cd LappJ-Android
+
+# Instalar dependências
+npm install
+
+# Rodar o projeto
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Pressione **`a`** para abrir no emulador Android.
 
-## Learn more
+---
 
-To learn more about developing your project with Expo, look at the following resources:
+## 📁 Estrutura de Pastas
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```
+LappJ/
+├── app/                    ← Telas do app (file-based routing)
+├── src/
+│   ├── components/         ← Componentes reutilizáveis
+│   ├── constants/          ← Cores e constantes
+│   └── hooks/              ← Hooks customizados
+├── assets/                 ← Imagens e ícones
+├── documentacao/           ← Requisitos do projeto
+└── visual idealizado/      ← Design de referência das telas
+```
 
-## Join the community
+---
 
-Join our community of developers creating universal apps.
+## 👨‍💻 Autor
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+**Luis Eduardo dos Santos Gonçalves**  
+Linguagens e Técnicas de Programação IV — 2026
