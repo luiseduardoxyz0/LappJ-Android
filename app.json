@@ -35,6 +35,13 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "O LappJ precisa acessar suas fotos para você escolher uma foto de perfil.",
+          "cameraPermission": "O LappJ precisa da câmera para você tirar uma foto de perfil."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

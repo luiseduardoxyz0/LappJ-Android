@@ -1,28 +1,39 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { Colors } from './theme';
 
 const ThemeContext = createContext();
 
+const THEME_MODE_KEY = '@lappj_theme_mode';
+
+// mode: 'system' | 'light' | 'dark'
 export function ThemeProvider({ children }) {
   const systemColorScheme = useColorScheme();
-  const [isDark, setIsDark] = useState(systemColorScheme === 'dark');
+  const [themeMode, setThemeModeState] = useState('system');
 
-  // Sincroniza com mudanças de tema do sistema
+  // Carrega preferência salva ao iniciar
   useEffect(() => {
-    if (systemColorScheme) {
-      setIsDark(systemColorScheme === 'dark');
-    }
-  }, [systemColorScheme]);
+    AsyncStorage.getItem(THEME_MODE_KEY).then((saved) => {
+      if (saved === 'light' || saved === 'dark' || saved === 'system') {
+        setThemeModeState(saved);
+      }
+    });
+  }, []);
 
-  const toggleTheme = () => {
-    setIsDark(!isDark);
+  const setThemeMode = async (mode) => {
+    setThemeModeState(mode);
+    await AsyncStorage.setItem(THEME_MODE_KEY, mode);
   };
+
+  // Quando mode é 'system', segue o tema do dispositivo em tempo real
+  const isDark =
+    themeMode === 'system' ? systemColorScheme === 'dark' : themeMode === 'dark';
 
   const theme = isDark ? Colors.dark : Colors.light;
 
   return (
-    <ThemeContext.Provider value={{ theme, isDark, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, isDark, themeMode, setThemeMode }}>
       {children}
     </ThemeContext.Provider>
   );

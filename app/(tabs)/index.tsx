@@ -1,4 +1,5 @@
-import { ENTREGAS_MOCK } from '@/constants/entregas';
+import { useEntregas } from '@/constants/EntregasContext';
+import { JOURNEY_KEYS } from '@/constants/journeyKeys';
 import { getSession, signOut } from '@/constants/localAuth';
 import { useTheme } from '@/constants/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,14 +16,7 @@ import {
     View,
 } from 'react-native';
 
-const STORAGE_KEYS = {
-  STATUS: '@lappj_journey_status',
-  START: '@lappj_journey_start',
-  LUNCH_START: '@lappj_journey_lunch_start',
-  LUNCH_TOTAL: '@lappj_journey_lunch_total',
-  WAIT_START: '@lappj_journey_wait_start',
-  WAIT_TOTAL: '@lappj_journey_wait_total',
-};
+const STORAGE_KEYS = JOURNEY_KEYS;
 
 // status: 'idle' | 'started' | 'lunch' | 'waiting' | 'ended'
 const STATUS_LABELS = {
@@ -46,6 +40,7 @@ const { width } = Dimensions.get('window');
 export default function DashboardMotoristaScreen() {
   const { theme, isDark } = useTheme();
   const router = useRouter();
+  const { entregas } = useEntregas();
   const [time, setTime] = useState(new Date());
   const [journeyStatus, setJourneyStatus] = useState('idle');
   const [journeyStart, setJourneyStart] = useState(null);
@@ -53,9 +48,13 @@ export default function DashboardMotoristaScreen() {
   const [lunchTotal, setLunchTotal] = useState(0);
   const [waitStart, setWaitStart] = useState(null);
   const [waitTotal, setWaitTotal] = useState(0);
+  const [lunchEnd, setLunchEnd] = useState(null);
+  const [waitEnd, setWaitEnd] = useState(null);
+  const [journeyEnd, setJourneyEnd] = useState(null);
   const [workedSeconds, setWorkedSeconds] = useState(0);
   const [userName, setUserName] = useState('Usuário');
   const [userInitials, setUserInitials] = useState('?');
+  const [historicoAberto, setHistoricoAberto] = useState(false);
   const stateRef = useRef({ journeyStatus, journeyStart, lunchStart, lunchTotal, waitStart, waitTotal });
 
   useEffect(() => {
@@ -86,6 +85,9 @@ export default function DashboardMotoristaScreen() {
         AsyncStorage.getItem(STORAGE_KEYS.LUNCH_TOTAL),
         AsyncStorage.getItem(STORAGE_KEYS.WAIT_START),
         AsyncStorage.getItem(STORAGE_KEYS.WAIT_TOTAL),
+        AsyncStorage.getItem(STORAGE_KEYS.LUNCH_END),
+        AsyncStorage.getItem(STORAGE_KEYS.WAIT_END),
+        AsyncStorage.getItem(STORAGE_KEYS.END),
       ]);
       if (status) setJourneyStatus(status);
       if (start) setJourneyStart(Number(start));
@@ -93,6 +95,14 @@ export default function DashboardMotoristaScreen() {
       if (lTotal) setLunchTotal(Number(lTotal));
       if (wStart) setWaitStart(Number(wStart));
       if (wTotal) setWaitTotal(Number(wTotal));
+      const stored = await AsyncStorage.multiGet([
+        STORAGE_KEYS.LUNCH_END,
+        STORAGE_KEYS.WAIT_END,
+        STORAGE_KEYS.END,
+      ]);
+      if (stored[0][1]) setLunchEnd(Number(stored[0][1]));
+      if (stored[1][1]) setWaitEnd(Number(stored[1][1]));
+      if (stored[2][1]) setJourneyEnd(Number(stored[2][1]));
     };
     loadState();
   }, []);
@@ -180,9 +190,11 @@ export default function DashboardMotoristaScreen() {
       setJourneyStatus('started');
       setLunchStart(null);
       setLunchTotal(newTotal);
+      setLunchEnd(now);
       await saveState({
         [STORAGE_KEYS.STATUS]: 'started',
         [STORAGE_KEYS.LUNCH_TOTAL]: newTotal,
+        [STORAGE_KEYS.LUNCH_END]: now,
       });
       await AsyncStorage.removeItem(STORAGE_KEYS.LUNCH_START);
 
@@ -202,9 +214,11 @@ export default function DashboardMotoristaScreen() {
       setJourneyStatus('started');
       setWaitStart(null);
       setWaitTotal(newTotal);
+      setWaitEnd(now);
       await saveState({
         [STORAGE_KEYS.STATUS]: 'started',
         [STORAGE_KEYS.WAIT_TOTAL]: newTotal,
+        [STORAGE_KEYS.WAIT_END]: now,
       });
       await AsyncStorage.removeItem(STORAGE_KEYS.WAIT_START);
 
@@ -220,7 +234,11 @@ export default function DashboardMotoristaScreen() {
             style: 'destructive',
             onPress: async () => {
               setJourneyStatus('ended');
-              await AsyncStorage.setItem(STORAGE_KEYS.STATUS, 'ended');
+              setJourneyEnd(now);
+              await saveState({
+                [STORAGE_KEYS.STATUS]: 'ended',
+                [STORAGE_KEYS.END]: now,
+              });
             },
           },
         ]
@@ -241,9 +259,12 @@ export default function DashboardMotoristaScreen() {
             setJourneyStatus('idle');
             setJourneyStart(null);
             setLunchStart(null);
+            setLunchEnd(null);
             setLunchTotal(0);
             setWaitStart(null);
+            setWaitEnd(null);
             setWaitTotal(0);
+            setJourneyEnd(null);
             setWorkedSeconds(0);
           },
         },
@@ -333,7 +354,7 @@ export default function DashboardMotoristaScreen() {
           <Ionicons name="cube" size={28} color={theme.primary} />
           <Text style={s.metricLabel}>ENTREGAS{'\n'}CONCLUÍDAS</Text>
           <Text style={s.metricValue}>
-            {ENTREGAS_MOCK.filter((e) => e.status === 'entregue').length}/{ENTREGAS_MOCK.length}
+            {entregas.filter((e) => e.status === 'entregue').length}/{entregas.length}
           </Text>
         </View>
       </View>
@@ -440,6 +461,109 @@ export default function DashboardMotoristaScreen() {
           <Text style={s.nextStopAddress}>Rua das Indústrias, 450 • 2.4km</Text>
         </View>
       </View>
+
+      {/* Histórico da Jornada */}
+      {journeyStatus !== 'idle' && (
+        <View style={s.historicoCard}>
+          <TouchableOpacity
+            style={s.historicoHeader}
+            onPress={() => setHistoricoAberto((v) => !v)}
+            activeOpacity={0.7}
+          >
+            <View style={s.historicoHeaderLeft}>
+              <Ionicons name="time" size={18} color={theme.primary} />
+              <Text style={s.historicoTitle}>HISTÓRICO DA JORNADA</Text>
+            </View>
+            <Ionicons
+              name={historicoAberto ? 'chevron-up' : 'chevron-down'}
+              size={18}
+              color={theme.textMuted}
+            />
+          </TouchableOpacity>
+
+          {historicoAberto && (
+            <View style={s.historicoBody}>
+              {/* Início */}
+              {journeyStart && (
+                <View style={s.historicoEvento}>
+                  <View style={[s.historicoDot, { backgroundColor: '#4CAF50' }]} />
+                  <View style={s.historicoInfo}>
+                    <Text style={s.historicoEventoLabel}>Início da Jornada</Text>
+                    <Text style={s.historicoEventoTime}>{formatTimestamp(journeyStart)}</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Almoço */}
+              {lunchStart && (
+                <View style={s.historicoEvento}>
+                  <View style={[s.historicoDot, { backgroundColor: '#FF9800' }]} />
+                  <View style={s.historicoInfo}>
+                    <Text style={s.historicoEventoLabel}>Almoço iniciado</Text>
+                    <Text style={s.historicoEventoTime}>{formatTimestamp(lunchStart)}</Text>
+                  </View>
+                  {journeyStatus === 'lunch' && (
+                    <View style={s.historicoBadge}>
+                      <Text style={[s.historicoBadgeText, { color: '#FF9800' }]}>EM ANDAMENTO</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+              {lunchEnd && (
+                <View style={s.historicoEvento}>
+                  <View style={[s.historicoDot, { backgroundColor: '#FF9800', opacity: 0.5 }]} />
+                  <View style={s.historicoInfo}>
+                    <Text style={s.historicoEventoLabel}>Fim do Almoço</Text>
+                    <Text style={s.historicoEventoTime}>
+                      {formatTimestamp(lunchEnd)} • duração: {Math.floor(lunchTotal / 60)}min
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Espera */}
+              {waitStart && (
+                <View style={s.historicoEvento}>
+                  <View style={[s.historicoDot, { backgroundColor: '#607D8B' }]} />
+                  <View style={s.historicoInfo}>
+                    <Text style={s.historicoEventoLabel}>Espera iniciada</Text>
+                    <Text style={s.historicoEventoTime}>{formatTimestamp(waitStart)}</Text>
+                  </View>
+                  {journeyStatus === 'waiting' && (
+                    <View style={s.historicoBadge}>
+                      <Text style={[s.historicoBadgeText, { color: '#607D8B' }]}>EM ANDAMENTO</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+              {waitEnd && (
+                <View style={s.historicoEvento}>
+                  <View style={[s.historicoDot, { backgroundColor: '#607D8B', opacity: 0.5 }]} />
+                  <View style={s.historicoInfo}>
+                    <Text style={s.historicoEventoLabel}>Fim da Espera</Text>
+                    <Text style={s.historicoEventoTime}>
+                      {formatTimestamp(waitEnd)} • duração: {Math.floor(waitTotal / 60)}min
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Fim */}
+              {journeyStatus === 'ended' && (
+                <View style={s.historicoEvento}>
+                  <View style={[s.historicoDot, { backgroundColor: '#F44336' }]} />
+                  <View style={s.historicoInfo}>
+                    <Text style={s.historicoEventoLabel}>Fim da Jornada</Text>
+                    <Text style={s.historicoEventoTime}>
+                      {journeyEnd ? formatTimestamp(journeyEnd) + ' • ' : ''}total: {formatWorked()}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -690,5 +814,74 @@ const styles = (theme, isDark) =>
       fontSize: 13,
       color: 'rgba(255, 255, 255, 0.8)',
       marginLeft: 6,
+    },
+    historicoCard: {
+      marginHorizontal: 16,
+      marginBottom: 20,
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      overflow: 'hidden',
+    },
+    historicoHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+    historicoHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    historicoTitle: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1.2,
+      color: theme.textMuted,
+    },
+    historicoBody: {
+      paddingHorizontal: 16,
+      paddingBottom: 16,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+      gap: 14,
+      paddingTop: 14,
+    },
+    historicoEvento: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    historicoDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+    },
+    historicoInfo: {
+      flex: 1,
+    },
+    historicoEventoLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.textPrimary,
+    },
+    historicoEventoTime: {
+      fontSize: 12,
+      color: theme.textMuted,
+      marginTop: 2,
+    },
+    historicoBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+    },
+    historicoBadgeText: {
+      fontSize: 9,
+      fontWeight: '700',
+      letterSpacing: 0.5,
     },
   });

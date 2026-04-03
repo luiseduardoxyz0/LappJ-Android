@@ -1,6 +1,8 @@
-import { ENTREGAS_MOCK, Entrega } from '@/constants/entregas';
+import { Entrega } from '@/constants/entregas';
+import { useEntregas } from '@/constants/EntregasContext';
 import { useTheme } from '@/constants/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   FlatList,
@@ -36,12 +38,14 @@ const STATUS_CONFIG = {
 
 export default function EntregasScreen() {
   const { theme, isDark } = useTheme();
+  const router = useRouter();
+  const { entregas } = useEntregas();
   const [busca, setBusca] = useState('');
   const [filtroAtivo, setFiltroAtivo] = useState('todos');
 
   const s = styles(theme, isDark);
 
-  const entregasFiltradas = ENTREGAS_MOCK.filter((e) => {
+  const entregasFiltradas = entregas.filter((e) => {
     const matchBusca =
       e.cliente.toLowerCase().includes(busca.toLowerCase()) ||
       e.pedido.toLowerCase().includes(busca.toLowerCase());
@@ -56,7 +60,8 @@ export default function EntregasScreen() {
     return (
       <TouchableOpacity
         style={[s.card, { borderLeftColor: config.borderColor }]}
-        activeOpacity={isAberta ? 0.7 : 1}
+        activeOpacity={0.7}
+        onPress={() => router.push({ pathname: '/entrega/[id]', params: { id: item.id } })}
       >
         {/* Linha superior: cliente + badge status */}
         <View style={s.cardHeader}>
@@ -98,10 +103,10 @@ export default function EntregasScreen() {
   };
 
   const totais = {
-    todos: ENTREGAS_MOCK.length,
-    transito: ENTREGAS_MOCK.filter((e) => e.status === 'transito').length,
-    pendente: ENTREGAS_MOCK.filter((e) => e.status === 'pendente').length,
-    entregue: ENTREGAS_MOCK.filter((e) => e.status === 'entregue').length,
+    todos: entregas.length,
+    transito: entregas.filter((e) => e.status === 'transito').length,
+    pendente: entregas.filter((e) => e.status === 'pendente').length,
+    entregue: entregas.filter((e) => e.status === 'entregue').length,
   };
 
   const filtros = [

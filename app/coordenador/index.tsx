@@ -4,14 +4,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const MOTORISTAS_MOCK = [
@@ -136,7 +136,11 @@ export default function DashboardCoordenadorScreen() {
   const renderMotorista = ({ item }: { item: typeof MOTORISTAS_MOCK[0] }) => {
     const progresso = item.total > 0 ? item.entregas / item.total : 0;
     return (
-      <View style={[s.card, item.atraso && s.cardAtraso]}>
+      <TouchableOpacity
+        style={[s.card, item.atraso && s.cardAtraso]}
+        activeOpacity={0.7}
+        onPress={() => router.push({ pathname: '/motorista/[id]', params: { id: item.id } })}
+      >
         <View style={s.cardHeader}>
           <View style={s.cardLeft}>
             <View style={[s.avatar, { backgroundColor: item.atraso ? '#D32F2F' : theme.primary }]}>
@@ -177,7 +181,7 @@ export default function DashboardCoordenadorScreen() {
             <Text style={s.cardFooterText}>{item.total - item.entregas} restantes</Text>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 

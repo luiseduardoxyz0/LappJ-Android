@@ -54,7 +54,9 @@ export default function LoginScreen() {
       } else {
         await AsyncStorage.removeItem(REMEMBER_KEY);
       }
-      if (session.perfil === 'coordenador') {
+      if (session.perfil === 'dev') {
+        router.replace('/admin');
+      } else if (session.perfil === 'coordenador') {
         router.replace('/coordenador');
       } else {
         router.replace('/(tabs)');
