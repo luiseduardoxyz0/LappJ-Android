@@ -3,9 +3,11 @@ import { ThemeProvider } from '@/constants/ThemeContext';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function RootLayout() {
   return (
+    <SafeAreaProvider>
     <ThemeProvider>
       <EntregasProvider>
         <Stack screenOptions={{ headerShown: false }}>
@@ -22,5 +24,6 @@ export default function RootLayout() {
         <StatusBar style="auto" />
       </EntregasProvider>
     </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

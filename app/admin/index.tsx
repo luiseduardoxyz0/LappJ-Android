@@ -20,6 +20,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type User = {
   email: string;
@@ -42,6 +43,7 @@ const PERFIL_ICONS: Record<string, string> = {
 
 export default function AdminDashboard() {
   const { theme, isDark } = useTheme() as any;
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [adminName, setAdminName] = useState('');
@@ -230,7 +232,7 @@ export default function AdminDashboard() {
   const countByPerfil = (perfil: string) => users.filter((u) => u.perfil === perfil).length;
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={s.header}>
         <View style={s.headerLeft}>
@@ -280,7 +282,7 @@ export default function AdminDashboard() {
         data={users}
         keyExtractor={(u) => u.email}
         renderItem={renderUser}
-        contentContainerStyle={s.listContent}
+        contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadData} />}
         ListFooterComponent={

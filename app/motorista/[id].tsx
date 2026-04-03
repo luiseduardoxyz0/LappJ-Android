@@ -10,6 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Espelha os dados de coordenador.tsx
 const MOTORISTAS_MOCK = [
@@ -98,6 +99,7 @@ const MOTORISTAS_MOCK = [
 export default function MotoristaDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const motorista = MOTORISTAS_MOCK.find((m) => m.id === id);
@@ -129,7 +131,7 @@ export default function MotoristaDetalheScreen() {
   };
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity style={s.backButton} onPress={() => router.back()}>
@@ -139,7 +141,7 @@ export default function MotoristaDetalheScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[s.scrollContent, { paddingBottom: insets.bottom }]} showsVerticalScrollIndicator={false}>
 
         {/* Card perfil */}
         <View style={[s.profileCard, motorista.atraso && s.profileCardAtraso]}>

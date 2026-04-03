@@ -5,13 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  FlatList,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    FlatList,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Dados importados de constants/entregas.ts
 
@@ -38,6 +39,7 @@ const STATUS_CONFIG = {
 
 export default function EntregasScreen() {
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { entregas } = useEntregas();
   const [busca, setBusca] = useState('');
@@ -117,7 +119,7 @@ export default function EntregasScreen() {
   ];
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={s.header}>
         <View style={s.headerLeft}>

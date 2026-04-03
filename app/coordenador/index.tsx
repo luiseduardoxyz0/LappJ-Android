@@ -4,15 +4,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const MOTORISTAS_MOCK = [
   {
@@ -79,6 +80,7 @@ const MOTORISTAS_MOCK = [
 
 export default function DashboardCoordenadorScreen() {
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [userName, setUserName] = useState('Coordenador');
   const [userInitials, setUserInitials] = useState('C');
@@ -186,7 +188,7 @@ export default function DashboardCoordenadorScreen() {
   };
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={s.header}>
         <View style={s.headerLeft}>
@@ -262,7 +264,7 @@ export default function DashboardCoordenadorScreen() {
         data={filtered}
         keyExtractor={(item) => item.id}
         renderItem={renderMotorista}
-        contentContainerStyle={s.listContent}
+        contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom }]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={s.empty}>

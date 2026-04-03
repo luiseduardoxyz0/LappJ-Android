@@ -15,9 +15,11 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function RegisterScreen() {
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -62,7 +64,7 @@ export default function RegisterScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={s.container}
     >
-      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[s.scrollContent, { paddingTop: insets.top, paddingBottom: insets.bottom }]} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={s.headerContainer}>
           <TouchableOpacity style={s.backButton} onPress={() => router.back()}>

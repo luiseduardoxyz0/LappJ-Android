@@ -9,6 +9,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
 // Entregas mock com coordenadas (São Paulo)
@@ -95,6 +96,7 @@ function buildMapHtml(userLat: number, userLng: number, isDark: boolean): string
 
 export default function MapsScreen() {
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -153,7 +155,7 @@ export default function MapsScreen() {
   const mapHtml = buildMapHtml(location!.lat, location!.lng, isDark);
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={s.header}>
         <Text style={s.headerTitle}>Mapa de Entregas</Text>

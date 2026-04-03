@@ -15,6 +15,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const STORAGE_KEYS = JOURNEY_KEYS;
 
@@ -39,6 +40,7 @@ const { width } = Dimensions.get('window');
 
 export default function DashboardMotoristaScreen() {
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { entregas } = useEntregas();
   const [time, setTime] = useState(new Date());
@@ -304,7 +306,7 @@ export default function DashboardMotoristaScreen() {
   const statusDotColor = STATUS_COLORS[journeyStatus] || '#9E9E9E';
 
   return (
-    <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+    <ScrollView contentContainerStyle={[s.scrollContent, { paddingTop: insets.top }]} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={s.header}>
         <View style={s.headerLeft}>

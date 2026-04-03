@@ -12,6 +12,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const STATUS_CONFIG = {
   transito: {
@@ -37,6 +38,7 @@ const STATUS_CONFIG = {
 export default function EntregaDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { entregas, confirmarEntrega } = useEntregas();
 
@@ -80,7 +82,7 @@ export default function EntregaDetalheScreen() {
   };
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity style={s.backButton} onPress={() => router.back()}>
@@ -91,7 +93,7 @@ export default function EntregaDetalheScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={s.scrollContent}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Badge de Status */}

@@ -14,6 +14,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AVATAR_KEY = '@lappj_avatar_uri';
 
@@ -51,6 +52,7 @@ const THEME_OPTIONS = [
 
 export default function MoreScreen() {
   const { theme, isDark, themeMode, setThemeMode } = useTheme() as any;
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -156,7 +158,7 @@ export default function MoreScreen() {
   const perfilIcon = userPerfil === 'coordenador' ? 'briefcase' : 'car';
 
   return (
-    <ScrollView style={s.container} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+    <ScrollView style={s.container} contentContainerStyle={[s.content, { paddingTop: insets.top }]} showsVerticalScrollIndicator={false}>
       {/* Card de perfil */}
       <View style={s.profileCard}>
         <TouchableOpacity style={s.avatarWrapper} onPress={handleAvatarPress} activeOpacity={0.8}>
