@@ -43,9 +43,17 @@ export const signIn = async (email, password) => {
   return session;
 };
 
-// Encerra a sessão
+// Encerra a sessão e limpa o estado de jornada do motorista
 export const signOut = async () => {
-  await AsyncStorage.removeItem(KEYS.SESSION);
+  await AsyncStorage.multiRemove([
+    KEYS.SESSION,
+    '@lappj_journey_status',
+    '@lappj_journey_start',
+    '@lappj_journey_lunch_start',
+    '@lappj_journey_lunch_total',
+    '@lappj_journey_wait_start',
+    '@lappj_journey_wait_total',
+  ]);
 };
 
 // Cadastra novo usuário (para uso futuro)

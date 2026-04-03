@@ -1,8 +1,9 @@
 import { signIn } from '@/constants/localAuth';
 import { useTheme } from '@/constants/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -23,6 +24,20 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  const REMEMBER_KEY = '@lappj_remember_access';
+
+  useEffect(() => {
+    AsyncStorage.getItem(REMEMBER_KEY).then((saved) => {
+      if (saved) {
+        const { email: savedEmail, password: savedPassword } = JSON.parse(saved);
+        setEmail(savedEmail);
+        setPassword(savedPassword);
+        setRememberMe(true);
+      }
+    });
+  }, []);
 
   const s = styles(theme, isDark);
 
@@ -34,6 +49,11 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const session = await signIn(email.trim(), password);
+      if (rememberMe) {
+        await AsyncStorage.setItem(REMEMBER_KEY, JSON.stringify({ email: email.trim(), password }));
+      } else {
+        await AsyncStorage.removeItem(REMEMBER_KEY);
+      }
       if (session.perfil === 'coordenador') {
         router.replace('/coordenador');
       } else {
@@ -129,6 +149,14 @@ export default function LoginScreen() {
               />
             </TouchableOpacity>
           </View>
+
+          {/* Lembrar acesso */}
+          <TouchableOpacity style={s.rememberRow} onPress={() => setRememberMe(!rememberMe)}>
+            <View style={[s.checkbox, rememberMe && s.checkboxActive]}>
+              {rememberMe && <Ionicons name="checkmark" size={13} color="white" />}
+            </View>
+            <Text style={s.rememberText}>Lembrar acesso</Text>
+          </TouchableOpacity>
 
           {/* Botão Entrar */}
           <TouchableOpacity style={s.loginButton} onPress={handleLogin} disabled={loading}>
@@ -268,6 +296,31 @@ const styles = (theme, isDark) =>
       fontWeight: '700',
       color: theme.primary,
     },
+    rememberRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 4,
+      gap: 10,
+    },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 5,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      backgroundColor: isDark ? theme.surfaceSecondary : '#F5F6FA',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    checkboxActive: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
+    rememberText: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      fontWeight: '500',
+    },
     loginButton: {
       backgroundColor: theme.primary,
       borderRadius: 12,
@@ -276,7 +329,7 @@ const styles = (theme, isDark) =>
       flexDirection: 'row',
       justifyContent: 'center',
       alignItems: 'center',
-      marginTop: 20,
+      marginTop: 12,
       marginBottom: 24,
     },
     loginButtonText: {

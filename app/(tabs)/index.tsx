@@ -1,3 +1,4 @@
+import { ENTREGAS_MOCK } from '@/constants/entregas';
 import { getSession, signOut } from '@/constants/localAuth';
 import { useTheme } from '@/constants/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -331,7 +332,9 @@ export default function DashboardMotoristaScreen() {
         <View style={s.metricCard}>
           <Ionicons name="cube" size={28} color={theme.primary} />
           <Text style={s.metricLabel}>ENTREGAS{'\n'}CONCLUÍDAS</Text>
-          <Text style={s.metricValue}>12/18</Text>
+          <Text style={s.metricValue}>
+            {ENTREGAS_MOCK.filter((e) => e.status === 'entregue').length}/{ENTREGAS_MOCK.length}
+          </Text>
         </View>
       </View>
 
