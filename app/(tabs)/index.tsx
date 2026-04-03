@@ -1,6 +1,8 @@
+import { getSession, signOut } from '@/constants/localAuth';
 import { useTheme } from '@/constants/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     Alert,
@@ -42,6 +44,7 @@ const { width } = Dimensions.get('window');
 
 export default function DashboardMotoristaScreen() {
   const { theme, isDark } = useTheme();
+  const router = useRouter();
   const [time, setTime] = useState(new Date());
   const [journeyStatus, setJourneyStatus] = useState('idle');
   const [journeyStart, setJourneyStart] = useState(null);
@@ -50,6 +53,8 @@ export default function DashboardMotoristaScreen() {
   const [waitStart, setWaitStart] = useState(null);
   const [waitTotal, setWaitTotal] = useState(0);
   const [workedSeconds, setWorkedSeconds] = useState(0);
+  const [userName, setUserName] = useState('Usuário');
+  const [userInitials, setUserInitials] = useState('?');
   const stateRef = useRef({ journeyStatus, journeyStart, lunchStart, lunchTotal, waitStart, waitTotal });
 
   useEffect(() => {
@@ -57,6 +62,20 @@ export default function DashboardMotoristaScreen() {
   }, [journeyStatus, journeyStart, lunchStart, lunchTotal, waitStart, waitTotal]);
 
   // Carrega estado persistido ao montar
+  useEffect(() => {
+    getSession().then((session) => {
+      if (session?.name) {
+        setUserName(session.name);
+        const parts = session.name.trim().split(' ');
+        const initials = parts.length >= 2
+          ? parts[0][0] + parts[parts.length - 1][0]
+          : parts[0].substring(0, 2);
+        setUserInitials(initials.toUpperCase());
+      }
+    });
+  }, []);
+
+  // Carrega jornada persistida ao montar
   useEffect(() => {
     const loadState = async () => {
       const [status, start, lStart, lTotal, wStart, wTotal] = await Promise.all([
@@ -231,6 +250,24 @@ export default function DashboardMotoristaScreen() {
     );
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Sair',
+      'Deseja encerrar a sessão?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: async () => {
+            await signOut();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
+
   const { hours, minutes, seconds } = formatClock();
   const s = styles(theme, isDark);
 
@@ -250,13 +287,16 @@ export default function DashboardMotoristaScreen() {
       <View style={s.header}>
         <View style={s.headerLeft}>
           <View style={s.avatar}>
-            <Text style={s.avatarText}>JS</Text>
+            <Text style={s.avatarText}>{userInitials}</Text>
           </View>
           <View>
-            <Text style={s.userName}>João da Silva</Text>
+            <Text style={s.userName}>{userName}</Text>
             <Text style={s.journeyText}>{STATUS_LABELS[journeyStatus]}</Text>
           </View>
         </View>
+        <TouchableOpacity style={s.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={22} color={theme.textSecondary} />
+        </TouchableOpacity>
 
       </View>
 
@@ -421,6 +461,11 @@ const styles = (theme, isDark) =>
       flexDirection: 'row',
       alignItems: 'center',
       flex: 1,
+    },
+    logoutButton: {
+      padding: 8,
+      borderRadius: 8,
+      backgroundColor: isDark ? theme.surfaceSecondary : '#F0F2F8',
     },
     avatar: {
       width: 48,

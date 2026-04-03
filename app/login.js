@@ -1,8 +1,11 @@
+import { signIn } from '@/constants/localAuth';
 import { useTheme } from '@/constants/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,35 +19,51 @@ import {
 export default function LoginScreen() {
   const { theme, isDark } = useTheme();
   const router = useRouter();
-  const [userType, setUserType] = useState('motorista');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const s = styles(theme, isDark);
 
-  const handleLogin = () => {
-    if (email && password) {
-      if (userType === 'motorista') {
-        router.replace('(tabs)');
+  const handleLogin = async () => {
+    if (!email.trim() || !password) {
+      Alert.alert('Campos obrigatórios', 'Por favor, preencha e-mail e senha.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const session = await signIn(email.trim(), password);
+      if (session.perfil === 'coordenador') {
+        router.replace('/coordenador');
       } else {
-        router.replace('(tabs)');
+        router.replace('/(tabs)');
       }
-    } else {
-      alert('Por favor, preencha e-mail e senha');
+    } catch (error) {
+      Alert.alert('Erro de acesso', error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleForgotPassword = () => {
+    Alert.alert(
+      'Recuperar senha',
+      'Entre em contato com o administrador do sistema para redefinir sua senha.',
+      [{ text: 'OK' }]
+    );
+  };
+
   const handleGoogleLogin = () => {
-    console.log('Google login');
+    Alert.alert('Em breve', 'Login com Google será implementado em breve.');
   };
 
   const handleMicrosoftLogin = () => {
-    console.log('Microsoft login');
+    Alert.alert('Em breve', 'Login com Microsoft será implementado em breve.');
   };
 
   const handleSupportContact = () => {
-    console.log('Contate o Suporte LappJ');
+    Alert.alert('Suporte LappJ', 'Entre em contato: suporte@lappj.com');
   };
 
   return (
@@ -66,42 +85,6 @@ export default function LoginScreen() {
 
         {/* Card principal */}
         <View style={s.card}>
-          {/* Toggle de perfil */}
-          <View style={s.profileToggleContainer}>
-            <TouchableOpacity
-              style={[
-                s.toggleButton,
-                userType === 'motorista' && s.toggleButtonActive,
-              ]}
-              onPress={() => setUserType('motorista')}
-            >
-              <Text
-                style={[
-                  s.toggleButtonText,
-                  userType === 'motorista' && s.toggleButtonTextActive,
-                ]}
-              >
-                Motorista
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                s.toggleButton,
-                userType === 'coordenador' && s.toggleButtonActive,
-              ]}
-              onPress={() => setUserType('coordenador')}
-            >
-              <Text
-                style={[
-                  s.toggleButtonText,
-                  userType === 'coordenador' && s.toggleButtonTextActive,
-                ]}
-              >
-                Coordenador
-              </Text>
-            </TouchableOpacity>
-          </View>
-
           {/* Label Email */}
           <Text style={s.label}>E-MAIL CORPORATIVO</Text>
 
@@ -122,7 +105,7 @@ export default function LoginScreen() {
           {/* Label Senha */}
           <View style={s.passwordLabelContainer}>
             <Text style={s.label}>SENHA DE ACESSO</Text>
-            <TouchableOpacity onPress={() => console.log('Esqueci minha senha')}>
+            <TouchableOpacity onPress={handleForgotPassword}>
               <Text style={s.forgotPasswordLink}>Esqueci minha senha</Text>
             </TouchableOpacity>
           </View>
@@ -148,9 +131,21 @@ export default function LoginScreen() {
           </View>
 
           {/* Botão Entrar */}
-          <TouchableOpacity style={s.loginButton} onPress={handleLogin}>
-            <Text style={s.loginButtonText}>Entrar na Jornada</Text>
-            <Ionicons name="arrow-forward" size={20} color="white" />
+          <TouchableOpacity style={s.loginButton} onPress={handleLogin} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                <Text style={s.loginButtonText}>Entrar na Jornada</Text>
+                <Ionicons name="arrow-forward" size={20} color="white" />
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* Botão Criar Conta */}
+          <TouchableOpacity style={s.registerButton} onPress={() => router.push('/register')}>
+            <Ionicons name="person-add-outline" size={20} color={theme.primary} />
+            <Text style={s.registerButtonText}>Criar Conta</Text>
           </TouchableOpacity>
 
           {/* Divisor OU CONTINUE COM */}
@@ -238,34 +233,6 @@ const styles = (theme, isDark) =>
       borderWidth: 1,
       borderColor: isDark ? theme.border : theme.border,
     },
-    profileToggleContainer: {
-      flexDirection: 'row',
-      marginBottom: 24,
-      backgroundColor: isDark ? theme.surfaceSecondary : '#F5F6FA',
-      borderRadius: 12,
-      padding: 4,
-    },
-    toggleButton: {
-      flex: 1,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      borderRadius: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    toggleButtonActive: {
-      backgroundColor: isDark ? theme.surface : '#FFFFFF',
-      borderWidth: 1,
-      borderColor: isDark ? theme.border : theme.border,
-    },
-    toggleButtonText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.textSecondary,
-    },
-    toggleButtonTextActive: {
-      color: theme.primary,
-    },
     label: {
       fontSize: 11,
       fontWeight: '700',
@@ -317,6 +284,23 @@ const styles = (theme, isDark) =>
       fontWeight: '700',
       color: '#FFFFFF',
       marginRight: 8,
+    },
+    registerButton: {
+      borderWidth: 1.5,
+      borderColor: theme.primary,
+      borderRadius: 12,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 24,
+      gap: 8,
+    },
+    registerButtonText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.primary,
     },
     dividerContainer: {
       flexDirection: 'row',

@@ -284,7 +284,7 @@ const styles = (theme, isDark) =>
     },
     filtrosContainer: {
       paddingHorizontal: 16,
-      paddingVertical: 10,
+      paddingVertical: 6,
       gap: 8,
     },
     filtroBtn: {
