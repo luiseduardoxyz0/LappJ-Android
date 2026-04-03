@@ -1,7 +1,9 @@
 import { useTheme } from '@/constants/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+    Alert,
     Dimensions,
     ScrollView,
     StyleSheet,
@@ -10,46 +12,237 @@ import {
     View,
 } from 'react-native';
 
+const STORAGE_KEYS = {
+  STATUS: '@lappj_journey_status',
+  START: '@lappj_journey_start',
+  LUNCH_START: '@lappj_journey_lunch_start',
+  LUNCH_TOTAL: '@lappj_journey_lunch_total',
+  WAIT_START: '@lappj_journey_wait_start',
+  WAIT_TOTAL: '@lappj_journey_wait_total',
+};
+
+// status: 'idle' | 'started' | 'lunch' | 'waiting' | 'ended'
+const STATUS_LABELS = {
+  idle: 'Aguardando Início',
+  started: 'Em Jornada',
+  lunch: 'Em Almoço',
+  waiting: 'Em Espera',
+  ended: 'Jornada Encerrada',
+};
+
+const STATUS_COLORS = {
+  idle: '#9E9E9E',
+  started: '#4CAF50',
+  lunch: '#FF9800',
+  waiting: '#607D8B',
+  ended: '#F44336',
+};
+
 const { width } = Dimensions.get('window');
 
-export default function DashboardMotoristaScreen({ navigation }) {
+export default function DashboardMotoristaScreen() {
   const { theme, isDark } = useTheme();
   const [time, setTime] = useState(new Date());
-  const [journeyStatus, setJourneyStatus] = useState('started');
-
-  const s = styles(theme, isDark);
+  const [journeyStatus, setJourneyStatus] = useState('idle');
+  const [journeyStart, setJourneyStart] = useState(null);
+  const [lunchStart, setLunchStart] = useState(null);
+  const [lunchTotal, setLunchTotal] = useState(0);
+  const [waitStart, setWaitStart] = useState(null);
+  const [waitTotal, setWaitTotal] = useState(0);
+  const [workedSeconds, setWorkedSeconds] = useState(0);
+  const stateRef = useRef({ journeyStatus, journeyStart, lunchStart, lunchTotal, waitStart, waitTotal });
 
   useEffect(() => {
+    stateRef.current = { journeyStatus, journeyStart, lunchStart, lunchTotal, waitStart, waitTotal };
+  }, [journeyStatus, journeyStart, lunchStart, lunchTotal, waitStart, waitTotal]);
+
+  // Carrega estado persistido ao montar
+  useEffect(() => {
+    const loadState = async () => {
+      const [status, start, lStart, lTotal, wStart, wTotal] = await Promise.all([
+        AsyncStorage.getItem(STORAGE_KEYS.STATUS),
+        AsyncStorage.getItem(STORAGE_KEYS.START),
+        AsyncStorage.getItem(STORAGE_KEYS.LUNCH_START),
+        AsyncStorage.getItem(STORAGE_KEYS.LUNCH_TOTAL),
+        AsyncStorage.getItem(STORAGE_KEYS.WAIT_START),
+        AsyncStorage.getItem(STORAGE_KEYS.WAIT_TOTAL),
+      ]);
+      if (status) setJourneyStatus(status);
+      if (start) setJourneyStart(Number(start));
+      if (lStart) setLunchStart(Number(lStart));
+      if (lTotal) setLunchTotal(Number(lTotal));
+      if (wStart) setWaitStart(Number(wStart));
+      if (wTotal) setWaitTotal(Number(wTotal));
+    };
+    loadState();
+  }, []);
+
+  // Timer: atualiza relógio e horas trabalhadas a cada segundo
+  useEffect(() => {
     const timer = setInterval(() => {
-      setTime(new Date());
+      const now = new Date();
+      setTime(now);
+      const { journeyStatus: st, journeyStart: jStart, lunchStart: lStart, lunchTotal: lTot, waitStart: wStart, waitTotal: wTot } = stateRef.current;
+      if (st === 'idle' || st === 'ended' || !jStart) {
+        setWorkedSeconds(0);
+        return;
+      }
+      const nowMs = now.getTime();
+      let elapsed = Math.floor((nowMs - jStart) / 1000);
+      let pausedSec = lTot + wTot;
+      if (st === 'lunch' && lStart) pausedSec += Math.floor((nowMs - lStart) / 1000);
+      if (st === 'waiting' && wStart) pausedSec += Math.floor((nowMs - wStart) / 1000);
+      setWorkedSeconds(Math.max(0, elapsed - pausedSec));
     }, 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const formatTime = () => {
-    const hours = String(time.getHours()).padStart(2, '0');
-    const minutes = String(time.getMinutes()).padStart(2, '0');
-    const seconds = String(time.getSeconds()).padStart(2, '0');
-    return { hours, minutes, seconds };
+  const formatClock = () => {
+    const h = String(time.getHours()).padStart(2, '0');
+    const m = String(time.getMinutes()).padStart(2, '0');
+    const s = String(time.getSeconds()).padStart(2, '0');
+    return { hours: h, minutes: m, seconds: s };
   };
 
   const formatDate = () => {
     const days = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
     const months = ['de janeiro', 'de fevereiro', 'de março', 'de abril', 'de maio', 'de junho',
                     'de julho', 'de agosto', 'de setembro', 'de outubro', 'de novembro', 'de dezembro'];
-    
-    const day = time.getDate();
-    const dayName = days[time.getDay()];
-    const monthName = months[time.getMonth()];
-    
-    return `${dayName}, ${day} ${monthName}`;
+    return `${days[time.getDay()]}, ${time.getDate()} ${months[time.getMonth()]}`;
   };
 
-  const { hours, minutes, seconds } = formatTime();
-
-  const handleJourneyAction = (action) => {
-    console.log('Ação:', action);
+  const formatWorked = () => {
+    const h = String(Math.floor(workedSeconds / 3600)).padStart(2, '0');
+    const m = String(Math.floor((workedSeconds % 3600) / 60)).padStart(2, '0');
+    return `${h}:${m}h`;
   };
+
+  const formatTimestamp = (ts) => {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return `às ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
+  const saveState = async (updates) => {
+    const pairs = Object.entries(updates).map(([key, val]) => [key, String(val)]);
+    await AsyncStorage.multiSet(pairs);
+  };
+
+  const handleJourneyAction = async (action) => {
+    const now = Date.now();
+
+    if (action === 'start') {
+      if (journeyStatus !== 'idle') return;
+      setJourneyStatus('started');
+      setJourneyStart(now);
+      setLunchTotal(0);
+      setWaitTotal(0);
+      await saveState({
+        [STORAGE_KEYS.STATUS]: 'started',
+        [STORAGE_KEYS.START]: now,
+        [STORAGE_KEYS.LUNCH_TOTAL]: 0,
+        [STORAGE_KEYS.WAIT_TOTAL]: 0,
+      });
+
+    } else if (action === 'lunch') {
+      if (journeyStatus !== 'started') return;
+      setJourneyStatus('lunch');
+      setLunchStart(now);
+      await saveState({
+        [STORAGE_KEYS.STATUS]: 'lunch',
+        [STORAGE_KEYS.LUNCH_START]: now,
+      });
+
+    } else if (action === 'endLunch') {
+      if (journeyStatus !== 'lunch') return;
+      const elapsed = lunchStart ? Math.floor((now - lunchStart) / 1000) : 0;
+      const newTotal = lunchTotal + elapsed;
+      setJourneyStatus('started');
+      setLunchStart(null);
+      setLunchTotal(newTotal);
+      await saveState({
+        [STORAGE_KEYS.STATUS]: 'started',
+        [STORAGE_KEYS.LUNCH_TOTAL]: newTotal,
+      });
+      await AsyncStorage.removeItem(STORAGE_KEYS.LUNCH_START);
+
+    } else if (action === 'waiting') {
+      if (journeyStatus !== 'started') return;
+      setJourneyStatus('waiting');
+      setWaitStart(now);
+      await saveState({
+        [STORAGE_KEYS.STATUS]: 'waiting',
+        [STORAGE_KEYS.WAIT_START]: now,
+      });
+
+    } else if (action === 'endWaiting') {
+      if (journeyStatus !== 'waiting') return;
+      const elapsed = waitStart ? Math.floor((now - waitStart) / 1000) : 0;
+      const newTotal = waitTotal + elapsed;
+      setJourneyStatus('started');
+      setWaitStart(null);
+      setWaitTotal(newTotal);
+      await saveState({
+        [STORAGE_KEYS.STATUS]: 'started',
+        [STORAGE_KEYS.WAIT_TOTAL]: newTotal,
+      });
+      await AsyncStorage.removeItem(STORAGE_KEYS.WAIT_START);
+
+    } else if (action === 'end') {
+      if (journeyStatus === 'idle' || journeyStatus === 'ended') return;
+      Alert.alert(
+        'Encerrar Jornada',
+        'Tem certeza que deseja encerrar a jornada? Esta ação não pode ser desfeita.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Encerrar',
+            style: 'destructive',
+            onPress: async () => {
+              setJourneyStatus('ended');
+              await AsyncStorage.setItem(STORAGE_KEYS.STATUS, 'ended');
+            },
+          },
+        ]
+      );
+    }
+  };
+
+  const handleResetJourney = () => {
+    Alert.alert(
+      'Nova Jornada',
+      'Iniciar uma nova jornada irá apagar os dados da jornada anterior.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar',
+          onPress: async () => {
+            await AsyncStorage.multiRemove(Object.values(STORAGE_KEYS));
+            setJourneyStatus('idle');
+            setJourneyStart(null);
+            setLunchStart(null);
+            setLunchTotal(0);
+            setWaitStart(null);
+            setWaitTotal(0);
+            setWorkedSeconds(0);
+          },
+        },
+      ]
+    );
+  };
+
+  const { hours, minutes, seconds } = formatClock();
+  const s = styles(theme, isDark);
+
+  const canStart = journeyStatus === 'idle';
+  const canLunch = journeyStatus === 'started';
+  const canEndLunch = journeyStatus === 'lunch';
+  const canWait = journeyStatus === 'started';
+  const canEndWait = journeyStatus === 'waiting';
+  const canEnd = journeyStatus === 'started' || journeyStatus === 'lunch' || journeyStatus === 'waiting';
+  const journeyDone = journeyStatus === 'ended';
+
+  const statusDotColor = STATUS_COLORS[journeyStatus] || '#9E9E9E';
 
   return (
     <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
@@ -61,14 +254,10 @@ export default function DashboardMotoristaScreen({ navigation }) {
           </View>
           <View>
             <Text style={s.userName}>João da Silva</Text>
-            <Text style={s.journeyText}>Em Jornada</Text>
+            <Text style={s.journeyText}>{STATUS_LABELS[journeyStatus]}</Text>
           </View>
         </View>
-        <View style={s.headerIcons}>
-          <Ionicons name="location" size={24} color={theme.accent} style={s.icon} />
-          <Ionicons name="wifi" size={24} color={theme.textPrimary} style={s.icon} />
-          <Ionicons name="notifications" size={24} color={theme.textPrimary} />
-        </View>
+
       </View>
 
       {/* Relógio Digital */}
@@ -86,18 +275,18 @@ export default function DashboardMotoristaScreen({ navigation }) {
         <View style={s.statusLeft}>
           <Text style={s.statusLabel}>STATUS DO MOTORISTA</Text>
           <View style={s.statusRow}>
-            <View style={s.statusDot} />
-            <Text style={s.statusValue}>Em Jornada</Text>
+            <View style={[s.statusDot, { backgroundColor: statusDotColor }]} />
+            <Text style={s.statusValue}>{STATUS_LABELS[journeyStatus]}</Text>
           </View>
         </View>
       </View>
 
-      {/* Métricas - 2 colunas */}
+      {/* Métricas */}
       <View style={s.metricsContainer}>
         <View style={s.metricCard}>
           <Ionicons name="time" size={28} color={theme.primary} />
           <Text style={s.metricLabel}>HORAS{'\n'}TRABALHADAS</Text>
-          <Text style={s.metricValue}>02:15h</Text>
+          <Text style={s.metricValue}>{formatWorked()}</Text>
         </View>
         <View style={s.metricCard}>
           <Ionicons name="cube" size={28} color={theme.primary} />
@@ -109,58 +298,95 @@ export default function DashboardMotoristaScreen({ navigation }) {
       {/* Ações de Controle */}
       <Text style={s.actionsLabel}>AÇÕES DE CONTROLE</Text>
 
-      {/* Iniciar Jornada (desabilitado) */}
-      <View style={s.actionItem}>
-        <View style={[s.actionButton, s.actionDisabled]}>
-          <Ionicons name="play-circle" size={24} color={theme.textMuted} />
-          <View style={s.actionTexts}>
-            <Text style={s.actionTitle}>Iniciar Jornada</Text>
-            <Text style={s.actionSubtitle}>Registrado às 06:27</Text>
-          </View>
-        </View>
-        <View style={s.actionCheck}>
-          <Ionicons name="checkmark-circle" size={24} color={theme.accent} />
-        </View>
-      </View>
-
-      {/* Grid 2x2 de Ações */}
+      {/* Grid de Ações */}
       <View style={s.actionGrid}>
+        {/* Iniciar / Nova Jornada */}
         <TouchableOpacity
-          style={[s.gridButton, s.gridButtonActive]}
-          onPress={() => handleJourneyAction('lunch')}
+          style={[
+            s.gridButton,
+            canStart || journeyDone ? s.gridButtonStart : s.gridButtonInactive,
+          ]}
+          onPress={() => canStart ? handleJourneyAction('start') : (journeyDone ? handleResetJourney() : null)}
+          disabled={!canStart && !journeyDone}
         >
-          <Ionicons name="restaurant" size={32} color="white" />
-          <Text style={s.gridButtonText}>INICIAR ALMOÇO</Text>
+          <Ionicons name={journeyDone ? 'refresh-circle' : 'play-circle'} size={32} color={canStart || journeyDone ? 'white' : theme.textMuted} />
+          <Text style={[s.gridButtonText, !canStart && !journeyDone && { color: theme.textMuted }]}>
+            {journeyDone ? 'NOVA JORNADA' : 'INICIAR JORNADA'}
+          </Text>
+          {journeyStart && !journeyDone && (
+            <Text style={[s.gridButtonSub, { color: theme.textMuted }]}>iniciado {formatTimestamp(journeyStart)}</Text>
+          )}
         </TouchableOpacity>
+        {/* Iniciar Almoço */}
         <TouchableOpacity
-          style={s.gridButton}
-          onPress={() => handleJourneyAction('endLunch')}
+          style={[
+            s.gridButton,
+            canLunch ? s.gridButtonActive : canEndLunch ? s.gridButtonActiveDone : s.gridButtonInactive,
+          ]}
+          onPress={() => handleJourneyAction('lunch')}
+          disabled={!canLunch}
         >
-          <Ionicons name="cut" size={32} color={theme.primary} />
-          <Text style={[s.gridButtonText, { color: theme.primary }]}>FIM DO ALMOÇO</Text>
+          <Ionicons name="restaurant" size={32} color={canLunch ? 'white' : canEndLunch ? theme.accent : theme.textMuted} />
+          <Text style={[s.gridButtonText, !canLunch && !canEndLunch && { color: theme.textMuted }, canEndLunch && { color: theme.accent }]}>
+            INICIAR ALMOÇO
+          </Text>
+          {canEndLunch && (
+            <Text style={[s.gridButtonSub, { color: theme.accent }]}>em andamento</Text>
+          )}
         </TouchableOpacity>
 
+        {/* Fim do Almoço */}
         <TouchableOpacity
-          style={[s.gridButton, s.gridButtonWaiting]}
-          onPress={() => handleJourneyAction('waiting')}
+          style={[s.gridButton, canEndLunch ? s.gridButtonActive : s.gridButtonInactive]}
+          onPress={() => handleJourneyAction('endLunch')}
+          disabled={!canEndLunch}
         >
-          <Ionicons name="hourglass" size={32} color="white" />
-          <Text style={s.gridButtonText}>INICIAR ESPERA</Text>
+          <Ionicons name="cut" size={32} color={canEndLunch ? 'white' : theme.textMuted} />
+          <Text style={[s.gridButtonText, !canEndLunch && { color: theme.textMuted }]}>
+            FIM DO ALMOÇO
+          </Text>
         </TouchableOpacity>
+
+        {/* Iniciar Espera */}
         <TouchableOpacity
-          style={s.gridButton}
-          onPress={() => handleJourneyAction('endWaiting')}
+          style={[
+            s.gridButton,
+            canWait ? s.gridButtonWaiting : canEndWait ? s.gridButtonWaitingDone : s.gridButtonInactive,
+          ]}
+          onPress={() => handleJourneyAction('waiting')}
+          disabled={!canWait}
         >
-          <Ionicons name="ban" size={32} color={theme.textSecondary} />
-          <Text style={[s.gridButtonText, { color: theme.textSecondary }]}>FIM DA ESPERA</Text>
+          <Ionicons name="hourglass" size={32} color={canWait ? 'white' : canEndWait ? theme.textSecondary : theme.textMuted} />
+          <Text style={[s.gridButtonText, !canWait && !canEndWait && { color: theme.textMuted }, canEndWait && { color: theme.textSecondary }]}>
+            INICIAR ESPERA
+          </Text>
+          {canEndWait && (
+            <Text style={[s.gridButtonSub, { color: theme.textSecondary }]}>em andamento</Text>
+          )}
+        </TouchableOpacity>
+
+        {/* Fim da Espera */}
+        <TouchableOpacity
+          style={[s.gridButton, canEndWait ? s.gridButtonWaiting : s.gridButtonInactive]}
+          onPress={() => handleJourneyAction('endWaiting')}
+          disabled={!canEndWait}
+        >
+          <Ionicons name="ban" size={32} color={canEndWait ? 'white' : theme.textMuted} />
+          <Text style={[s.gridButtonText, !canEndWait && { color: theme.textMuted }]}>
+            FIM DA ESPERA
+          </Text>
+        </TouchableOpacity>
+
+        {/* Fim da Jornada */}
+        <TouchableOpacity
+          style={[s.gridButton, canEnd ? s.gridButtonEnd : s.gridButtonInactive]}
+          onPress={() => handleJourneyAction('end')}
+          disabled={!canEnd}
+        >
+          <Ionicons name="stop-circle" size={32} color={canEnd ? 'white' : theme.textMuted} />
+          <Text style={[s.gridButtonText, !canEnd && { color: theme.textMuted }]}>FIM DA JORNADA</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Botão Fim da Jornada */}
-      <TouchableOpacity style={s.endJourneyButton} onPress={() => handleJourneyAction('end')}>
-        <Ionicons name="stop-circle" size={20} color="white" style={{ marginRight: 8 }} />
-        <Text style={s.endJourneyText}>Fim da Jornada</Text>
-      </TouchableOpacity>
 
       {/* Próxima Parada */}
       <View style={s.nextStopCard}>
@@ -219,14 +445,6 @@ const styles = (theme, isDark) =>
     journeyText: {
       fontSize: 12,
       color: theme.textSecondary,
-    },
-    headerIcons: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    icon: {
-      marginLeft: 4,
     },
     timeSection: {
       alignItems: 'center',
@@ -339,43 +557,6 @@ const styles = (theme, isDark) =>
       marginTop: 24,
       marginBottom: 12,
     },
-    actionItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginHorizontal: 16,
-      marginBottom: 16,
-    },
-    actionButton: {
-      flex: 1,
-      flexDirection: 'row',
-      padding: 12,
-      backgroundColor: theme.surface,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: isDark ? theme.border : 'transparent',
-      alignItems: 'center',
-    },
-    actionDisabled: {
-      opacity: 0.6,
-    },
-    actionTexts: {
-      marginLeft: 12,
-      flex: 1,
-    },
-    actionTitle: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.textMuted,
-    },
-    actionSubtitle: {
-      fontSize: 12,
-      color: theme.textMuted,
-      opacity: 0.7,
-      marginTop: 2,
-    },
-    actionCheck: {
-      marginLeft: 8,
-    },
     actionGrid: {
       marginHorizontal: 16,
       marginBottom: 16,
@@ -392,14 +573,32 @@ const styles = (theme, isDark) =>
       justifyContent: 'center',
       marginBottom: 0,
     },
+    gridButtonStart: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
+    gridButtonEnd: {
+      backgroundColor: '#D32F2F',
+      borderColor: '#D32F2F',
+    },
     gridButtonActive: {
       backgroundColor: theme.accent,
       borderColor: theme.accent,
-      marginBottom: 12,
+    },
+    gridButtonActiveDone: {
+      borderColor: theme.accent,
+      borderWidth: 2,
     },
     gridButtonWaiting: {
       backgroundColor: theme.textSecondary,
       borderColor: theme.textSecondary,
+    },
+    gridButtonWaitingDone: {
+      borderColor: theme.textSecondary,
+      borderWidth: 2,
+    },
+    gridButtonInactive: {
+      opacity: 0.45,
     },
     gridButtonText: {
       fontSize: 13,
@@ -408,21 +607,11 @@ const styles = (theme, isDark) =>
       marginTop: 12,
       textAlign: 'center',
     },
-    endJourneyButton: {
-      marginHorizontal: 16,
-      marginBottom: 16,
-      paddingVertical: 14,
-      paddingHorizontal: 16,
-      backgroundColor: theme.primary,
-      borderRadius: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    endJourneyText: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: 'white',
+    gridButtonSub: {
+      fontSize: 10,
+      fontWeight: '600',
+      marginTop: 4,
+      textAlign: 'center',
     },
     nextStopCard: {
       marginHorizontal: 16,
