@@ -264,6 +264,7 @@ export default function DashboardCoordenadorScreen() {
         data={filtered}
         keyExtractor={(item) => item.id}
         renderItem={renderMotorista}
+        style={{ flex: 1 }}
         contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom }]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
@@ -358,7 +359,7 @@ const styles = (theme: any, isDark: boolean) =>
       fontSize: 14,
       color: theme.textPrimary,
     },
-    filtersScroll: { marginBottom: 4 },
+    filtersScroll: { marginBottom: 8, flexGrow: 0 },
     filtersContent: { paddingHorizontal: 16, paddingVertical: 6, gap: 8 },
     filterButton: {
       paddingHorizontal: 14,
@@ -376,7 +377,7 @@ const styles = (theme: any, isDark: boolean) =>
     },
     filterText: { fontSize: 12, fontWeight: '600', color: theme.textSecondary },
     filterTextActive: { color: 'white' },
-    listContent: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 24 },
+    listContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24 },
     card: {
       backgroundColor: theme.surface,
       borderRadius: 14,
