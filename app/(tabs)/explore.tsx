@@ -154,6 +154,7 @@ export default function EntregasScreen() {
         data={filtros}
         keyExtractor={(item) => item.key}
         showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0 }}
         contentContainerStyle={s.filtrosContainer}
         renderItem={({ item }) => (
           <TouchableOpacity
@@ -172,6 +173,7 @@ export default function EntregasScreen() {
         data={entregasFiltradas}
         keyExtractor={(item) => item.id}
         renderItem={renderCard}
+        style={{ flex: 1 }}
         contentContainerStyle={s.listaContainer}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
