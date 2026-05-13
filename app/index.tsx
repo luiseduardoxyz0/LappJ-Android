@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
 });
 
 export default function App() {
-  const [target, setTarget] = useState<'loading' | '/login' | '/(tabs)' | '/coordenador'>('loading');
+  const [target, setTarget] = useState<'loading' | '/login' | '/(tabs)' | '/coordenador' | '/admin'>('loading');
 
   useEffect(() => {
     // Mínimo de 2s para a splash ser visível mesmo com sessão já salva
@@ -161,7 +161,9 @@ export default function App() {
     const sessionCheck = getSession()
       .then((session) => {
         if (!session) return '/login';
-        return session.perfil === 'coordenador' ? '/coordenador' : '/(tabs)';
+        if (session.perfil === 'coordenador') return '/coordenador';
+        if (session.perfil === 'dev') return '/admin';
+        return '/(tabs)';
       })
       .catch(() => '/login');
 
