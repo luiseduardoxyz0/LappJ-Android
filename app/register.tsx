@@ -1,4 +1,4 @@
-import { registerUser } from '@/constants/localAuth';
+import { registerUser } from '@/constants/localAuth'; // → redireciona para firebaseAuth.js
 import { useTheme } from '@/constants/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';

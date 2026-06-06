@@ -1,4 +1,4 @@
-import { signIn } from '@/constants/localAuth';
+import { signIn, signInWithGoogle } from '@/constants/localAuth';
 import { useTheme } from '@/constants/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -26,6 +26,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
   const REMEMBER_KEY = '@lappj_remember_access';
@@ -78,12 +79,28 @@ export default function LoginScreen() {
     );
   };
 
-  const handleGoogleLogin = () => {
-    Alert.alert('Em breve', 'Login com Google será implementado em breve.');
-  };
-
-  const handleMicrosoftLogin = () => {
-    Alert.alert('Em breve', 'Login com Microsoft será implementado em breve.');
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    try {
+      const session = await signInWithGoogle();
+      // Novo usuário via Google → escolher perfil
+      if (session.isNewUser) {
+        router.replace({ pathname: '/escolha-perfil', params: { uid: session.uid, name: session.name } });
+        return;
+      }
+      // Usuário existente → navega normalmente
+      if (session.perfil === 'dev') {
+        router.replace('/admin');
+      } else if (session.perfil === 'coordenador') {
+        router.replace('/coordenador');
+      } else {
+        router.replace('/(tabs)');
+      }
+    } catch (error) {
+      Alert.alert('Erro ao entrar com Google', error.message);
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   const handleSupportContact = () => {
@@ -189,13 +206,17 @@ export default function LoginScreen() {
 
           {/* Botões Google e Microsoft */}
           <View style={s.socialButtonsContainer}>
-            <TouchableOpacity style={s.socialButton} onPress={handleGoogleLogin}>
-              <Ionicons name="logo-google" size={24} color="#F5A623" />
+            <TouchableOpacity
+              style={[s.socialButton, googleLoading && { opacity: 0.7 }]}
+              onPress={handleGoogleLogin}
+              disabled={googleLoading || loading}
+            >
+              {googleLoading ? (
+                <ActivityIndicator size="small" color="#F5A623" />
+              ) : (
+                <Ionicons name="logo-google" size={24} color="#F5A623" />
+              )}
               <Text style={s.socialButtonText}>Google</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.socialButton} onPress={handleMicrosoftLogin}>
-              <Ionicons name="logo-microsoft" size={24} color="#00A4EF" />
-              <Text style={s.socialButtonText}>Microsoft</Text>
             </TouchableOpacity>
           </View>
         </View>

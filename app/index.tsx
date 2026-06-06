@@ -1,5 +1,7 @@
-import { getSession } from '@/constants/localAuth';
+import { auth, db } from '@/constants/firebaseConfig';
 import { Redirect } from 'expo-router';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
@@ -156,18 +158,33 @@ export default function App() {
   const [target, setTarget] = useState<'loading' | '/login' | '/(tabs)' | '/coordenador' | '/admin'>('loading');
 
   useEffect(() => {
-    // Mínimo de 2s para a splash ser visível mesmo com sessão já salva
     const minDelay = new Promise((res) => setTimeout(res, 2000));
-    const sessionCheck = getSession()
-      .then((session) => {
-        if (!session) return '/login';
-        if (session.perfil === 'coordenador') return '/coordenador';
-        if (session.perfil === 'dev') return '/admin';
-        return '/(tabs)';
-      })
-      .catch(() => '/login');
 
-    Promise.all([minDelay, sessionCheck]).then(([, dest]) => {
+    const authCheck = new Promise<string>((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        unsubscribe();
+        if (!firebaseUser) {
+          resolve('/login');
+          return;
+        }
+        try {
+          // Busca o perfil do usuário no Firestore para saber para onde navegar
+          const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (!snap.exists()) {
+            resolve('/login');
+            return;
+          }
+          const perfil = snap.data().perfil;
+          if (perfil === 'dev') resolve('/admin');
+          else if (perfil === 'coordenador') resolve('/coordenador');
+          else resolve('/(tabs)');
+        } catch {
+          resolve('/login');
+        }
+      });
+    });
+
+    Promise.all([minDelay, authCheck]).then(([, dest]) => {
       setTarget(dest as any);
     });
   }, []);
