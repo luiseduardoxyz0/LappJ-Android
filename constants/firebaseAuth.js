@@ -73,6 +73,25 @@ export const updateUserPerfil = async (uid, perfil) => {
 };
 
 /**
+ * Atualiza os dados cadastrais do usuário.
+ */
+export const updateUserData = async (uid, data) => {
+  const { updateDoc } = await import('firebase/firestore');
+  const ref = doc(db, 'users', uid);
+  await updateDoc(ref, data);
+};
+
+/**
+ * Altera a senha do usuário atualmente logado.
+ */
+export const changeUserPassword = async (newPassword) => {
+  const { updatePassword } = await import('firebase/auth');
+  const currentUser = auth.currentUser;
+  if (!currentUser) throw new Error('Usuário não está logado.');
+  await updatePassword(currentUser, newPassword);
+};
+
+/**
  * Cancela a criação de conta via Google.
  * Deleta o usuário do Firebase Auth, o documento do Firestore e faz logout do Google.
  * Usado quando o usuário clica em "Cancelar" na tela de escolha de perfil.

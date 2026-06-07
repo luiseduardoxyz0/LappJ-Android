@@ -25,24 +25,24 @@ const MENU_ITEMS = [
   {
     section: 'Conta',
     items: [
-      { icon: 'person-outline', label: 'Editar Perfil', soon: true },
-      { icon: 'lock-closed-outline', label: 'Alterar Senha', soon: true },
-      { icon: 'notifications-outline', label: 'Notificações', soon: true },
+      { icon: 'person-outline', label: 'Editar Perfil', route: '/settings/edit-profile' },
+      { icon: 'lock-closed-outline', label: 'Alterar Senha', route: '/settings/change-password' },
+      { icon: 'notifications-outline', label: 'Notificações', route: '/settings/notifications' },
     ],
   },
   {
     section: 'Aplicativo',
     items: [
-      { icon: 'language-outline', label: 'Idioma', soon: true },
-      { icon: 'shield-checkmark-outline', label: 'Privacidade', soon: true },
+      { icon: 'language-outline', label: 'Idioma', route: '/settings/language' },
+      { icon: 'shield-checkmark-outline', label: 'Privacidade', route: '/settings/privacy' },
     ],
   },
   {
     section: 'Suporte',
     items: [
-      { icon: 'help-circle-outline', label: 'Ajuda e FAQ', soon: true },
-      { icon: 'chatbubble-outline', label: 'Falar com Suporte', soon: true },
-      { icon: 'information-circle-outline', label: 'Sobre o LappJ', soon: true },
+      { icon: 'help-circle-outline', label: 'Ajuda e FAQ', route: '/settings/faq' },
+      { icon: 'chatbubble-outline', label: 'Falar com Suporte', route: '/settings/support' },
+      { icon: 'information-circle-outline', label: 'Sobre o LappJ', route: '/settings/about' },
     ],
   },
 ];
@@ -156,8 +156,12 @@ export default function MoreScreen() {
     ]);
   };
 
-  const handleSoon = (label: string) => {
-    Alert.alert('Em breve', `"${label}" estará disponível em uma próxima versão.`);
+  const handleItemPress = (item: any) => {
+    if (item.soon) {
+      Alert.alert('Em breve', `"${item.label}" estará disponível em uma próxima versão.`);
+    } else if (item.route) {
+      router.push(item.route);
+    }
   };
 
   const perfilLabel = userPerfil === 'coordenador' ? 'Coordenador' : 'Motorista';
@@ -267,7 +271,7 @@ export default function MoreScreen() {
               <TouchableOpacity
                 key={item.label}
                 style={[s.menuItem, index < section.items.length - 1 && s.menuItemBorder]}
-                onPress={() => handleSoon(item.label)}
+                onPress={() => handleItemPress(item)}
                 activeOpacity={0.7}
               >
                 <View style={s.menuItemLeft}>

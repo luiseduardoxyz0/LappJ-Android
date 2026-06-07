@@ -8,4 +8,5 @@ export const JOURNEY_KEYS = {
   WAIT_END: '@lappj_journey_wait_end',
   WAIT_TOTAL: '@lappj_journey_wait_total',
   END: '@lappj_journey_end',
+  EVENTS: '@lappj_journey_events',
 } as const;

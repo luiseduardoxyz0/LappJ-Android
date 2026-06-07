@@ -20,6 +20,7 @@ export default function RootLayout() {
           <Stack.Screen name="entrega/[id]" />
           <Stack.Screen name="motorista/[id]" />
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="settings" />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
         <StatusBar style="auto" />

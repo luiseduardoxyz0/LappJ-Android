@@ -39,20 +39,22 @@ const STATUS_COLORS = {
 
 const { width } = Dimensions.get('window');
 
+export type JourneyEvent = { id: string; type: 'lunch' | 'wait'; start: number; end: number | null; duration: number };
+
 export default function DashboardMotoristaScreen() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { entregas } = useEntregas();
   const [time, setTime] = useState(new Date());
+  
   const [journeyStatus, setJourneyStatus] = useState<keyof typeof STATUS_LABELS>('idle');
   const [journeyStart, setJourneyStart] = useState<number | null>(null);
   const [lunchStart, setLunchStart] = useState<number | null>(null);
   const [lunchTotal, setLunchTotal] = useState(0);
   const [waitStart, setWaitStart] = useState<number | null>(null);
   const [waitTotal, setWaitTotal] = useState(0);
-  const [lunchEnd, setLunchEnd] = useState<number | null>(null);
-  const [waitEnd, setWaitEnd] = useState<number | null>(null);
+  const [journeyEvents, setJourneyEvents] = useState<JourneyEvent[]>([]);
   const [journeyEnd, setJourneyEnd] = useState<number | null>(null);
   const [workedSeconds, setWorkedSeconds] = useState(0);
   const [userName, setUserName] = useState('Usuário');
@@ -90,16 +92,15 @@ export default function DashboardMotoristaScreen() {
   // Carrega jornada persistida ao montar
   useEffect(() => {
     const loadState = async () => {
-      const [status, start, lStart, lTotal, wStart, wTotal] = await Promise.all([
+      const [status, start, lStart, lTotal, wStart, wTotal, end, eventsStr] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.STATUS),
         AsyncStorage.getItem(STORAGE_KEYS.START),
         AsyncStorage.getItem(STORAGE_KEYS.LUNCH_START),
         AsyncStorage.getItem(STORAGE_KEYS.LUNCH_TOTAL),
         AsyncStorage.getItem(STORAGE_KEYS.WAIT_START),
         AsyncStorage.getItem(STORAGE_KEYS.WAIT_TOTAL),
-        AsyncStorage.getItem(STORAGE_KEYS.LUNCH_END),
-        AsyncStorage.getItem(STORAGE_KEYS.WAIT_END),
         AsyncStorage.getItem(STORAGE_KEYS.END),
+        AsyncStorage.getItem(STORAGE_KEYS.EVENTS),
       ]);
       if (status) setJourneyStatus(status as keyof typeof STATUS_LABELS);
       if (start) setJourneyStart(Number(start));
@@ -107,14 +108,8 @@ export default function DashboardMotoristaScreen() {
       if (lTotal) setLunchTotal(Number(lTotal));
       if (wStart) setWaitStart(Number(wStart));
       if (wTotal) setWaitTotal(Number(wTotal));
-      const stored = await AsyncStorage.multiGet([
-        STORAGE_KEYS.LUNCH_END,
-        STORAGE_KEYS.WAIT_END,
-        STORAGE_KEYS.END,
-      ]);
-      if (stored[0][1]) setLunchEnd(Number(stored[0][1]));
-      if (stored[1][1]) setWaitEnd(Number(stored[1][1]));
-      if (stored[2][1]) setJourneyEnd(Number(stored[2][1]));
+      if (end) setJourneyEnd(Number(end));
+      if (eventsStr) setJourneyEvents(JSON.parse(eventsStr));
     };
     loadState();
   }, []);
@@ -179,11 +174,13 @@ export default function DashboardMotoristaScreen() {
       setJourneyStart(now);
       setLunchTotal(0);
       setWaitTotal(0);
+      setJourneyEvents([]);
       await saveState({
         [STORAGE_KEYS.STATUS]: 'started',
         [STORAGE_KEYS.START]: now,
         [STORAGE_KEYS.LUNCH_TOTAL]: 0,
         [STORAGE_KEYS.WAIT_TOTAL]: 0,
+        [STORAGE_KEYS.EVENTS]: '[]',
       });
 
     } else if (action === 'lunch') {
@@ -199,14 +196,18 @@ export default function DashboardMotoristaScreen() {
       if (journeyStatus !== 'lunch') return;
       const elapsed = lunchStart ? Math.floor((now - lunchStart) / 1000) : 0;
       const newTotal = lunchTotal + elapsed;
+      const newEvent: JourneyEvent = { id: Date.now().toString(), type: 'lunch', start: lunchStart!, end: now, duration: elapsed };
+      const updatedEvents = [...journeyEvents, newEvent];
+      
       setJourneyStatus('started');
       setLunchStart(null);
       setLunchTotal(newTotal);
-      setLunchEnd(now);
+      setJourneyEvents(updatedEvents);
+      
       await saveState({
         [STORAGE_KEYS.STATUS]: 'started',
         [STORAGE_KEYS.LUNCH_TOTAL]: newTotal,
-        [STORAGE_KEYS.LUNCH_END]: now,
+        [STORAGE_KEYS.EVENTS]: JSON.stringify(updatedEvents),
       });
       await AsyncStorage.removeItem(STORAGE_KEYS.LUNCH_START);
 
@@ -223,14 +224,18 @@ export default function DashboardMotoristaScreen() {
       if (journeyStatus !== 'waiting') return;
       const elapsed = waitStart ? Math.floor((now - waitStart) / 1000) : 0;
       const newTotal = waitTotal + elapsed;
+      const newEvent: JourneyEvent = { id: Date.now().toString(), type: 'wait', start: waitStart!, end: now, duration: elapsed };
+      const updatedEvents = [...journeyEvents, newEvent];
+      
       setJourneyStatus('started');
       setWaitStart(null);
       setWaitTotal(newTotal);
-      setWaitEnd(now);
+      setJourneyEvents(updatedEvents);
+      
       await saveState({
         [STORAGE_KEYS.STATUS]: 'started',
         [STORAGE_KEYS.WAIT_TOTAL]: newTotal,
-        [STORAGE_KEYS.WAIT_END]: now,
+        [STORAGE_KEYS.EVENTS]: JSON.stringify(updatedEvents),
       });
       await AsyncStorage.removeItem(STORAGE_KEYS.WAIT_START);
 
@@ -271,11 +276,10 @@ export default function DashboardMotoristaScreen() {
             setJourneyStatus('idle');
             setJourneyStart(null);
             setLunchStart(null);
-            setLunchEnd(null);
             setLunchTotal(0);
             setWaitStart(null);
-            setWaitEnd(null);
             setWaitTotal(0);
+            setJourneyEvents([]);
             setJourneyEnd(null);
             setWorkedSeconds(0);
           },
@@ -510,7 +514,22 @@ export default function DashboardMotoristaScreen() {
                 </View>
               )}
 
-              {/* Almoço */}
+              {/* Eventos Concluídos (Almoços e Esperas) */}
+              {journeyEvents.map((ev) => (
+                <View key={ev.id} style={s.historicoEvento}>
+                  <View style={[s.historicoDot, { backgroundColor: ev.type === 'lunch' ? '#FF9800' : '#607D8B', opacity: 0.5 }]} />
+                  <View style={s.historicoInfo}>
+                    <Text style={s.historicoEventoLabel}>
+                      {ev.type === 'lunch' ? 'Almoço (Concluído)' : 'Espera (Concluída)'}
+                    </Text>
+                    <Text style={s.historicoEventoTime}>
+                      {formatTimestamp(ev.start)} até {formatTimestamp(ev.end)} • duração: {Math.floor(ev.duration / 60)}min
+                    </Text>
+                  </View>
+                </View>
+              ))}
+
+              {/* Almoço em andamento */}
               {lunchStart && (
                 <View style={s.historicoEvento}>
                   <View style={[s.historicoDot, { backgroundColor: '#FF9800' }]} />
@@ -525,19 +544,8 @@ export default function DashboardMotoristaScreen() {
                   )}
                 </View>
               )}
-              {lunchEnd && (
-                <View style={s.historicoEvento}>
-                  <View style={[s.historicoDot, { backgroundColor: '#FF9800', opacity: 0.5 }]} />
-                  <View style={s.historicoInfo}>
-                    <Text style={s.historicoEventoLabel}>Fim do Almoço</Text>
-                    <Text style={s.historicoEventoTime}>
-                      {formatTimestamp(lunchEnd)} • duração: {Math.floor(lunchTotal / 60)}min
-                    </Text>
-                  </View>
-                </View>
-              )}
 
-              {/* Espera */}
+              {/* Espera em andamento */}
               {waitStart && (
                 <View style={s.historicoEvento}>
                   <View style={[s.historicoDot, { backgroundColor: '#607D8B' }]} />
@@ -550,17 +558,6 @@ export default function DashboardMotoristaScreen() {
                       <Text style={[s.historicoBadgeText, { color: '#607D8B' }]}>EM ANDAMENTO</Text>
                     </View>
                   )}
-                </View>
-              )}
-              {waitEnd && (
-                <View style={s.historicoEvento}>
-                  <View style={[s.historicoDot, { backgroundColor: '#607D8B', opacity: 0.5 }]} />
-                  <View style={s.historicoInfo}>
-                    <Text style={s.historicoEventoLabel}>Fim da Espera</Text>
-                    <Text style={s.historicoEventoTime}>
-                      {formatTimestamp(waitEnd)} • duração: {Math.floor(waitTotal / 60)}min
-                    </Text>
-                  </View>
                 </View>
               )}
 

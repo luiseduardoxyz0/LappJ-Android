@@ -18,4 +18,6 @@ export {
   adminClearJourneyData,
   adminResetDatabase,
   adminGetUserByEmail,
+  updateUserData,
+  changeUserPassword,
 } from './firebaseAuth';
