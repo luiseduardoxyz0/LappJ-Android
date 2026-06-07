@@ -17,3 +17,8 @@ expo-env.d.ts
 # Documentação local do projeto (não compartilhar no repositório)
 CONTEXTO.md
 RELATORIO_DESENVOLVIMENTO.md
+
+# Firebase — arquivos sensíveis (não subir no GitHub)
+google-services.json
+GoogleService-Info.plist
+constants/firebaseConfig.js
