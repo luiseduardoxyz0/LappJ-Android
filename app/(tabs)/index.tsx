@@ -1,6 +1,7 @@
 import { useEntregas } from '@/constants/EntregasContext';
 import { JOURNEY_KEYS } from '@/constants/journeyKeys';
 import { getSession, signOut } from '@/constants/localAuth';
+import { cancelAllReminders, scheduleJourneyEndReminder, scheduleLunchReminder } from '@/constants/notifications';
 import { useTheme } from '@/constants/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -175,6 +176,14 @@ export default function DashboardMotoristaScreen() {
       setLunchTotal(0);
       setWaitTotal(0);
       setJourneyEvents([]);
+      
+      // Agenda lembrete de fim de jornada de 8h
+      const journeyAlerts = await AsyncStorage.getItem('@lappj_notif_journey');
+      if (journeyAlerts !== 'false') {
+        await cancelAllReminders();
+        await scheduleJourneyEndReminder();
+      }
+
       await saveState({
         [STORAGE_KEYS.STATUS]: 'started',
         [STORAGE_KEYS.START]: now,
@@ -187,6 +196,12 @@ export default function DashboardMotoristaScreen() {
       if (journeyStatus !== 'started') return;
       setJourneyStatus('lunch');
       setLunchStart(now);
+      
+      const journeyAlerts = await AsyncStorage.getItem('@lappj_notif_journey');
+      if (journeyAlerts !== 'false') {
+        await scheduleLunchReminder();
+      }
+
       await saveState({
         [STORAGE_KEYS.STATUS]: 'lunch',
         [STORAGE_KEYS.LUNCH_START]: now,
@@ -204,6 +219,8 @@ export default function DashboardMotoristaScreen() {
       setLunchTotal(newTotal);
       setJourneyEvents(updatedEvents);
       
+      await cancelAllReminders(); // Cancela o alerta de almoço
+
       await saveState({
         [STORAGE_KEYS.STATUS]: 'started',
         [STORAGE_KEYS.LUNCH_TOTAL]: newTotal,
@@ -252,6 +269,7 @@ export default function DashboardMotoristaScreen() {
             onPress: async () => {
               setJourneyStatus('ended');
               setJourneyEnd(now);
+              await cancelAllReminders(); // Cancela qualquer alerta pendente
               await saveState({
                 [STORAGE_KEYS.STATUS]: 'ended',
                 [STORAGE_KEYS.END]: now,
