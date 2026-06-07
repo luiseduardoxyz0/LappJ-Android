@@ -2,10 +2,13 @@ import { Entrega } from '@/constants/entregas';
 import { useEntregas } from '@/constants/EntregasContext';
 import { useTheme } from '@/constants/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { getSession } from '@/constants/localAuth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
     FlatList,
+    Image,
     StyleSheet,
     Text,
     TextInput,
@@ -44,8 +47,30 @@ export default function EntregasScreen() {
   const { entregas } = useEntregas();
   const [busca, setBusca] = useState('');
   const [filtroAtivo, setFiltroAtivo] = useState('todos');
+  const [userInitials, setUserInitials] = useState('?');
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
   const s = styles(theme, isDark);
+
+  useFocusEffect(
+    useCallback(() => {
+      getSession().then((session) => {
+        if (!session) return;
+        const uid = (session as any).uid || '';
+        const parts = session.name.trim().split(' ');
+        const initials = parts.length >= 2
+          ? parts[0][0] + parts[parts.length - 1][0]
+          : parts[0].substring(0, 2);
+        setUserInitials(initials.toUpperCase());
+        
+        if (uid) {
+          AsyncStorage.getItem(`@lappj_avatar_uri_${uid}`).then((uri) => {
+            setAvatarUri(uri || null);
+          });
+        }
+      });
+    }, [])
+  );
 
   const entregasFiltradas = entregas.filter((e) => {
     const matchBusca =
@@ -123,9 +148,13 @@ export default function EntregasScreen() {
       {/* Header */}
       <View style={s.header}>
         <View style={s.headerLeft}>
-          <View style={s.avatar}>
-            <Text style={s.avatarText}>JS</Text>
-          </View>
+          {avatarUri ? (
+            <Image source={{ uri: avatarUri }} style={s.avatarImage} />
+          ) : (
+            <View style={s.avatar}>
+              <Text style={s.avatarText}>{userInitials}</Text>
+            </View>
+          )}
           <Text style={s.headerTitle}>Entregas do Dia</Text>
         </View>
         <Ionicons name="notifications-outline" size={24} color={theme.textPrimary} />
@@ -219,6 +248,11 @@ const styles = (theme: any, isDark: boolean) =>
       color: 'white',
       fontWeight: '700',
       fontSize: 13,
+    },
+    avatarImage: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
     },
     headerTitle: {
       fontSize: 18,

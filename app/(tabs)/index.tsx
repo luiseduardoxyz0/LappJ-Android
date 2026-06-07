@@ -4,11 +4,12 @@ import { getSession, signOut } from '@/constants/localAuth';
 import { useTheme } from '@/constants/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Dimensions,
+    Image,
     ScrollView,
     StyleSheet,
     Text,
@@ -44,18 +45,19 @@ export default function DashboardMotoristaScreen() {
   const router = useRouter();
   const { entregas } = useEntregas();
   const [time, setTime] = useState(new Date());
-  const [journeyStatus, setJourneyStatus] = useState('idle');
-  const [journeyStart, setJourneyStart] = useState(null);
-  const [lunchStart, setLunchStart] = useState(null);
+  const [journeyStatus, setJourneyStatus] = useState<keyof typeof STATUS_LABELS>('idle');
+  const [journeyStart, setJourneyStart] = useState<number | null>(null);
+  const [lunchStart, setLunchStart] = useState<number | null>(null);
   const [lunchTotal, setLunchTotal] = useState(0);
-  const [waitStart, setWaitStart] = useState(null);
+  const [waitStart, setWaitStart] = useState<number | null>(null);
   const [waitTotal, setWaitTotal] = useState(0);
-  const [lunchEnd, setLunchEnd] = useState(null);
-  const [waitEnd, setWaitEnd] = useState(null);
-  const [journeyEnd, setJourneyEnd] = useState(null);
+  const [lunchEnd, setLunchEnd] = useState<number | null>(null);
+  const [waitEnd, setWaitEnd] = useState<number | null>(null);
+  const [journeyEnd, setJourneyEnd] = useState<number | null>(null);
   const [workedSeconds, setWorkedSeconds] = useState(0);
   const [userName, setUserName] = useState('Usuário');
   const [userInitials, setUserInitials] = useState('?');
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [historicoAberto, setHistoricoAberto] = useState(false);
   const stateRef = useRef({ journeyStatus, journeyStart, lunchStart, lunchTotal, waitStart, waitTotal });
 
@@ -63,19 +65,27 @@ export default function DashboardMotoristaScreen() {
     stateRef.current = { journeyStatus, journeyStart, lunchStart, lunchTotal, waitStart, waitTotal };
   }, [journeyStatus, journeyStart, lunchStart, lunchTotal, waitStart, waitTotal]);
 
-  // Carrega estado persistido ao montar
-  useEffect(() => {
-    getSession().then((session) => {
-      if (session?.name) {
+  // Carrega estado persistido ao montar e ao focar a tela
+  useFocusEffect(
+    useCallback(() => {
+      getSession().then((session) => {
+        if (!session) return;
         setUserName(session.name);
+        const uid = (session as any).uid || '';
         const parts = session.name.trim().split(' ');
         const initials = parts.length >= 2
           ? parts[0][0] + parts[parts.length - 1][0]
           : parts[0].substring(0, 2);
         setUserInitials(initials.toUpperCase());
-      }
-    });
-  }, []);
+        // Carrega avatar individual por usuário
+        if (uid) {
+          AsyncStorage.getItem(`@lappj_avatar_uri_${uid}`).then((uri) => {
+            setAvatarUri(uri || null);
+          });
+        }
+      });
+    }, [])
+  );
 
   // Carrega jornada persistida ao montar
   useEffect(() => {
@@ -91,7 +101,7 @@ export default function DashboardMotoristaScreen() {
         AsyncStorage.getItem(STORAGE_KEYS.WAIT_END),
         AsyncStorage.getItem(STORAGE_KEYS.END),
       ]);
-      if (status) setJourneyStatus(status);
+      if (status) setJourneyStatus(status as keyof typeof STATUS_LABELS);
       if (start) setJourneyStart(Number(start));
       if (lStart) setLunchStart(Number(lStart));
       if (lTotal) setLunchTotal(Number(lTotal));
@@ -149,18 +159,18 @@ export default function DashboardMotoristaScreen() {
     return `${h}:${m}h`;
   };
 
-  const formatTimestamp = (ts) => {
+  const formatTimestamp = (ts: number | null) => {
     if (!ts) return '';
     const d = new Date(ts);
     return `às ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
 
-  const saveState = async (updates) => {
-    const pairs = Object.entries(updates).map(([key, val]) => [key, String(val)]);
+  const saveState = async (updates: Record<string, string | number>) => {
+    const pairs = Object.entries(updates).map(([key, val]) => [key, String(val)] as [string, string]);
     await AsyncStorage.multiSet(pairs);
   };
 
-  const handleJourneyAction = async (action) => {
+  const handleJourneyAction = async (action: 'start' | 'lunch' | 'endLunch' | 'waiting' | 'endWaiting' | 'end') => {
     const now = Date.now();
 
     if (action === 'start') {
@@ -310,9 +320,13 @@ export default function DashboardMotoristaScreen() {
       {/* Header */}
       <View style={s.header}>
         <View style={s.headerLeft}>
-          <View style={s.avatar}>
-            <Text style={s.avatarText}>{userInitials}</Text>
-          </View>
+          {avatarUri ? (
+            <Image source={{ uri: avatarUri }} style={s.avatarImage} />
+          ) : (
+            <View style={s.avatar}>
+              <Text style={s.avatarText}>{userInitials}</Text>
+            </View>
+          )}
           <View>
             <Text style={s.userName}>{userName}</Text>
             <Text style={s.journeyText}>{STATUS_LABELS[journeyStatus]}</Text>
@@ -570,7 +584,7 @@ export default function DashboardMotoristaScreen() {
   );
 }
 
-const styles = (theme, isDark) =>
+const styles = (theme: any, isDark: boolean) =>
   StyleSheet.create({
     scrollContent: {
       flexGrow: 1,
@@ -609,6 +623,12 @@ const styles = (theme, isDark) =>
       color: 'white',
       fontWeight: '700',
       fontSize: 14,
+    },
+    avatarImage: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      marginRight: 12,
     },
     userName: {
       fontSize: 14,

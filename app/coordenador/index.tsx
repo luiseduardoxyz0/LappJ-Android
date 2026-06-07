@@ -1,11 +1,13 @@
 import { getSession, signOut } from '@/constants/localAuth';
 import { useTheme } from '@/constants/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -84,23 +86,32 @@ export default function DashboardCoordenadorScreen() {
   const router = useRouter();
   const [userName, setUserName] = useState('Coordenador');
   const [userInitials, setUserInitials] = useState('C');
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('Todos');
 
   const s = styles(theme, isDark);
 
-  useEffect(() => {
-    getSession().then((session) => {
-      if (session?.name) {
+  useFocusEffect(
+    useCallback(() => {
+      getSession().then((session) => {
+        if (!session) return;
         setUserName(session.name);
+        const uid = (session as any).uid || '';
         const parts = session.name.trim().split(' ');
         const initials = parts.length >= 2
           ? parts[0][0] + parts[parts.length - 1][0]
           : parts[0].substring(0, 2);
         setUserInitials(initials.toUpperCase());
-      }
-    });
-  }, []);
+        
+        if (uid) {
+          AsyncStorage.getItem(`@lappj_avatar_uri_${uid}`).then((uri) => {
+            setAvatarUri(uri || null);
+          });
+        }
+      });
+    }, [])
+  );
 
   const handleLogout = () => {
     Alert.alert('Sair', 'Deseja encerrar a sessão?', [
@@ -192,9 +203,13 @@ export default function DashboardCoordenadorScreen() {
       {/* Header */}
       <View style={s.header}>
         <View style={s.headerLeft}>
-          <View style={s.avatar}>
-            <Text style={s.avatarText}>{userInitials}</Text>
-          </View>
+          {avatarUri ? (
+            <Image source={{ uri: avatarUri }} style={s.avatarImage} />
+          ) : (
+            <View style={s.avatar}>
+              <Text style={s.avatarText}>{userInitials}</Text>
+            </View>
+          )}
           <View>
             <Text style={s.userName}>{userName}</Text>
             <Text style={s.userRole}>Coordenador</Text>
@@ -302,6 +317,12 @@ const styles = (theme: any, isDark: boolean) =>
       marginRight: 12,
     },
     avatarText: { color: 'white', fontWeight: '700', fontSize: 14 },
+    avatarImage: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      marginRight: 12,
+    },
     userName: { fontSize: 14, fontWeight: '700', color: theme.textPrimary },
     userRole: { fontSize: 12, color: theme.textSecondary, marginTop: 2 },
     logoutButton: {

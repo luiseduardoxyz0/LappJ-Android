@@ -8,6 +8,8 @@ import { useEffect, useState } from 'react';
 import {
     Alert,
     Image,
+    Modal,
+    Pressable,
     ScrollView,
     StyleSheet,
     Text,
@@ -16,7 +18,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const AVATAR_KEY = '@lappj_avatar_uri';
+// Chave do avatar por UID — garante foto individual por usuário
+const avatarKey = (uid: string) => `@lappj_avatar_uri_${uid}`;
 
 const MENU_ITEMS = [
   {
@@ -57,15 +60,19 @@ export default function MoreScreen() {
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [userPerfil, setUserPerfil] = useState('');
+  const [userUid, setUserUid] = useState('');
   const [userInitials, setUserInitials] = useState('');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [themeOpen, setThemeOpen] = useState(false);
+  const [avatarModalVisible, setAvatarModalVisible] = useState(false);
 
   const s = styles(theme, isDark);
 
   useEffect(() => {
     getSession().then((session) => {
       if (!session) return;
+      const uid = (session as any).uid || '';
+      setUserUid(uid);
       setUserName(session.name);
       setUserEmail(session.email);
       setUserPerfil(session.perfil);
@@ -75,65 +82,64 @@ export default function MoreScreen() {
           ? parts[0][0] + parts[parts.length - 1][0]
           : parts[0].substring(0, 2);
       setUserInitials(initials.toUpperCase());
-    });
-    AsyncStorage.getItem(AVATAR_KEY).then((uri) => {
-      if (uri) setAvatarUri(uri);
+
+      // Carrega avatar específico deste usuário
+      if (uid) {
+        AsyncStorage.getItem(avatarKey(uid)).then((uri) => {
+          if (uri) setAvatarUri(uri);
+        });
+      }
     });
   }, []);
 
   const handleAvatarPress = () => {
-    Alert.alert('Foto de Perfil', 'Escolha uma opção', [
-      {
-        text: 'Câmera',
-        onPress: async () => {
-          const { status } = await ImagePicker.requestCameraPermissionsAsync();
-          if (status !== 'granted') {
-            Alert.alert('Permissão negada', 'Acesso à câmera é necessário para tirar uma foto.');
-            return;
-          }
-          const result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.7,
-          });
-          if (!result.canceled && result.assets[0]) {
-            const uri = result.assets[0].uri;
-            setAvatarUri(uri);
-            await AsyncStorage.setItem(AVATAR_KEY, uri);
-          }
-        },
-      },
-      {
-        text: 'Galeria',
-        onPress: async () => {
-          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (status !== 'granted') {
-            Alert.alert('Permissão negada', 'Acesso à galeria é necessário para escolher uma foto.');
-            return;
-          }
-          const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.7,
-          });
-          if (!result.canceled && result.assets[0]) {
-            const uri = result.assets[0].uri;
-            setAvatarUri(uri);
-            await AsyncStorage.setItem(AVATAR_KEY, uri);
-          }
-        },
-      },
-      {
-        text: 'Remover foto',
-        style: 'destructive',
-        onPress: async () => {
-          setAvatarUri(null);
-          await AsyncStorage.removeItem(AVATAR_KEY);
-        },
-      },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
+    setAvatarModalVisible(true);
+  };
+
+  const handleCamera = async () => {
+    setAvatarModalVisible(false);
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permissão negada', 'Acesso à câmera é necessário para tirar uma foto.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const uri = result.assets[0].uri;
+      setAvatarUri(uri);
+      if (userUid) await AsyncStorage.setItem(avatarKey(userUid), uri);
+    }
+  };
+
+  const handleGallery = async () => {
+    setAvatarModalVisible(false);
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permissão negada', 'Acesso à galeria é necessário para escolher uma foto.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+      legacy: true,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const uri = result.assets[0].uri;
+      setAvatarUri(uri);
+      if (userUid) await AsyncStorage.setItem(avatarKey(userUid), uri);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    setAvatarModalVisible(false);
+    setAvatarUri(null);
+    if (userUid) await AsyncStorage.removeItem(avatarKey(userUid));
   };
 
   const handleLogout = () => {
@@ -292,6 +298,37 @@ export default function MoreScreen() {
 
       {/* Versão */}
       <Text style={s.version}>LappJ v1.0.0-BETA • © 2026</Text>
+
+      {/* Modal de Foto de Perfil */}
+      <Modal visible={avatarModalVisible} transparent animationType="fade" onRequestClose={() => setAvatarModalVisible(false)}>
+        <Pressable style={s.modalOverlay} onPress={() => setAvatarModalVisible(false)}>
+          <View style={s.modalContainer}>
+            <Text style={s.modalTitle}>Foto de Perfil</Text>
+            <Text style={s.modalSubtitle}>Escolha uma opção</Text>
+
+            <TouchableOpacity style={s.modalOptionBtn} onPress={handleCamera}>
+              <Ionicons name="camera-outline" size={22} color={theme.primary} />
+              <Text style={s.modalOptionText}>Tirar uma foto (Câmera)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={s.modalOptionBtn} onPress={handleGallery}>
+              <Ionicons name="images-outline" size={22} color={theme.primary} />
+              <Text style={s.modalOptionText}>Escolher da Galeria</Text>
+            </TouchableOpacity>
+
+            {avatarUri && (
+              <TouchableOpacity style={s.modalOptionBtn} onPress={handleRemovePhoto}>
+                <Ionicons name="trash-outline" size={22} color="#D32F2F" />
+                <Text style={[s.modalOptionText, { color: '#D32F2F' }]}>Remover foto atual</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={s.modalCancelBtn} onPress={() => setAvatarModalVisible(false)}>
+              <Text style={s.modalCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
@@ -464,5 +501,53 @@ const styles = (theme: any, isDark: boolean) =>
       fontSize: 12,
       color: theme.textMuted,
       marginBottom: 8,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalContainer: {
+      backgroundColor: theme.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 24,
+      paddingBottom: 40,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: theme.textPrimary,
+      marginBottom: 4,
+    },
+    modalSubtitle: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginBottom: 24,
+    },
+    modalOptionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+      gap: 16,
+    },
+    modalOptionText: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: theme.textPrimary,
+    },
+    modalCancelBtn: {
+      marginTop: 24,
+      paddingVertical: 16,
+      alignItems: 'center',
+      backgroundColor: theme.background,
+      borderRadius: 14,
+    },
+    modalCancelText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.textSecondary,
     },
   });
