@@ -72,6 +72,37 @@ export const updateUserPerfil = async (uid, perfil) => {
   await updateDoc(ref, { perfil });
 };
 
+/**
+ * Cancela a criação de conta via Google.
+ * Deleta o usuário do Firebase Auth, o documento do Firestore e faz logout do Google.
+ * Usado quando o usuário clica em "Cancelar" na tela de escolha de perfil.
+ */
+export const cancelGoogleSignup = async (uid) => {
+  try {
+    const { deleteDoc } = await import('firebase/firestore');
+    const { deleteUser } = await import('firebase/auth');
+
+    // Remove o documento do Firestore
+    await deleteDoc(doc(db, 'users', uid)).catch(() => null);
+
+    // Deleta a conta do Firebase Auth
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      await deleteUser(currentUser).catch(() => null);
+    }
+
+    // Faz logout do Google nativo
+    await GoogleSignin.revokeAccess().catch(() => null);
+    await GoogleSignin.signOut().catch(() => null);
+
+    // Logout do Firebase
+    await firebaseSignOut(auth).catch(() => null);
+  } catch {
+    // Mesmo com erro, garante o logout local
+    await firebaseSignOut(auth).catch(() => null);
+  }
+};
+
 // ─── Sessão ───────────────────────────────────────────────────────────────────
 
 /**

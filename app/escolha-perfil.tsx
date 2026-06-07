@@ -1,4 +1,4 @@
-import { updateUserPerfil } from '@/constants/firebaseAuth';
+import { cancelGoogleSignup, updateUserPerfil } from '@/constants/firebaseAuth';
 import { useTheme } from '@/constants/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -41,6 +41,7 @@ export default function EscolhaPerfilScreen() {
 
   const [selecionado, setSelecionado] = useState<Perfil | null>(null);
   const [loading, setLoading] = useState(false);
+  const [canceling, setCanceling] = useState(false);
 
   // Animações de entrada
   const headerAnim = useRef(new Animated.Value(0)).current;
@@ -87,6 +88,29 @@ export default function EscolhaPerfilScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancelar = async () => {
+    Alert.alert(
+      'Cancelar cadastro',
+      'Sua conta Google será removida do LappJ. Você poderá entrar novamente quando quiser.',
+      [
+        { text: 'Não, continuar', style: 'cancel' },
+        {
+          text: 'Sim, cancelar',
+          style: 'destructive',
+          onPress: async () => {
+            setCanceling(true);
+            try {
+              if (uid) await cancelGoogleSignup(uid);
+            } finally {
+              setCanceling(false);
+              router.replace('/login' as any);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const firstName = name?.split(' ')[0] || 'você';
@@ -152,7 +176,7 @@ export default function EscolhaPerfilScreen() {
         </Text>
       </View>
 
-      {/* Botão confirmar */}
+      {/* Botões de ação */}
       <Animated.View style={[s.btnWrapper, animStyle(btnAnim)]}>
         <TouchableOpacity
           style={[
@@ -161,7 +185,7 @@ export default function EscolhaPerfilScreen() {
             selecionado === 'coordenador' && { backgroundColor: '#F5A623' },
           ]}
           onPress={handleConfirmar}
-          disabled={loading || !selecionado}
+          disabled={loading || canceling || !selecionado}
           activeOpacity={0.85}
         >
           {loading ? (
@@ -171,6 +195,19 @@ export default function EscolhaPerfilScreen() {
               <Text style={s.btnText}>Confirmar e Entrar</Text>
               <Ionicons name="arrow-forward" size={20} color="white" />
             </>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={s.btnCancelar}
+          onPress={handleCancelar}
+          disabled={loading || canceling}
+          activeOpacity={0.7}
+        >
+          {canceling ? (
+            <ActivityIndicator color={theme.textSecondary} size="small" />
+          ) : (
+            <Text style={s.btnCancelarText}>Cancelar</Text>
           )}
         </TouchableOpacity>
       </Animated.View>
@@ -304,5 +341,17 @@ const styles = (theme: any, isDark: boolean) =>
       fontSize: 16,
       fontWeight: '700',
       color: '#FFFFFF',
+    },
+    btnCancelar: {
+      marginTop: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    btnCancelarText: {
+      fontSize: 15,
+      fontWeight: '500',
+      color: theme.textSecondary,
+      textDecorationLine: 'underline',
     },
   });
