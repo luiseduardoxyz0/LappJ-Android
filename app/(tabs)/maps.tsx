@@ -3,11 +3,11 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
@@ -29,28 +29,52 @@ const STATUS_COLORS: Record<string, string> = {
 
 function buildMapHtml(userLat: number, userLng: number, isDark: boolean): string {
   const tileUrl = isDark
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    ? 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
   const attribution = isDark
     ? '&copy; <a href="https://carto.com/">CARTO</a>'
     : '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>';
 
+  const nextEntrega = ENTREGAS_MAPA.find((e) => e.status === 'transito');
+
   const markersJs = ENTREGAS_MAPA.map((e) => {
     const color = STATUS_COLORS[e.status] || '#9E9E9E';
+    const isNext = e.id === nextEntrega?.id;
     return `
       L.circleMarker([${e.lat}, ${e.lng}], {
-        radius: 10,
+        radius: ${isNext ? 13 : 10},
         fillColor: '${color}',
         color: '#fff',
-        weight: 2,
+        weight: ${isNext ? 3 : 2},
         opacity: 1,
-        fillOpacity: 0.9
+        fillOpacity: 0.95
       }).addTo(map).bindPopup(
         '<b>${e.cliente}</b><br>ETA: ${e.eta}<br>Status: ${e.status}'
-      );
+      )${isNext ? ".openPopup()" : ""};
     `;
   }).join('\n');
+
+  // Busca rota da API OSRM e desenha no mapa
+  const routeJs = nextEntrega ? `
+    fetch('https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${nextEntrega.lng},${nextEntrega.lat}?overview=full&geometries=geojson')
+      .then(r => r.json())
+      .then(data => {
+        if (data.routes && data.routes.length > 0) {
+          var coords = data.routes[0].geometry.coordinates.map(function(c) {
+            return [c[1], c[0]];
+          });
+          L.polyline(coords, {
+            color: '#4A90E2',
+            weight: 5,
+            opacity: 0.85,
+            lineJoin: 'round',
+            lineCap: 'round'
+          }).addTo(map);
+        }
+      })
+      .catch(function(e) { console.log('Erro rota:', e); });
+  ` : '';
 
   return `
 <!DOCTYPE html>
@@ -62,24 +86,31 @@ function buildMapHtml(userLat: number, userLng: number, isDark: boolean): string
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body, #map { height: 100%; width: 100%; }
+    html, body, #map { height: 100%; width: 100%; background: ${isDark ? '#1a1a2e' : '#f0f0f0'}; }
+    .leaflet-popup-content-wrapper {
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      font-family: -apple-system, sans-serif;
+    }
+    .leaflet-popup-content b { color: #333; font-size: 13px; }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <script>
     var map = L.map('map', { zoomControl: true, attributionControl: true })
-                .setView([${userLat}, ${userLng}], 13);
+                .setView([${userLat}, ${userLng}], 14);
 
     L.tileLayer('${tileUrl}', {
       attribution: '${attribution}',
       maxZoom: 19
     }).addTo(map);
 
-    // Marcador do motorista (azul)
+    // Marcador do motorista (carro azul)
     var driverIcon = L.divIcon({
-      html: '<div style="width:18px;height:18px;border-radius:50%;background:#1A237E;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>',
-      iconSize: [18, 18],
+      html: '<div style="width:32px;height:32px;border-radius:50%;background:#1A237E;border:3px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;font-size:14px;">🚗</div>',
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
       className: ''
     });
     L.marker([${userLat}, ${userLng}], { icon: driverIcon })
@@ -88,6 +119,14 @@ function buildMapHtml(userLat: number, userLng: number, isDark: boolean): string
 
     // Marcadores de entrega
     ${markersJs}
+
+    // Rota via OSRM
+    ${routeJs}
+
+    // Expõe função para centralizar
+    window.centerOnMe = function() {
+      map.setView([${userLat}, ${userLng}], 15, { animate: true });
+    };
   </script>
 </body>
 </html>
@@ -100,7 +139,6 @@ export default function MapsScreen() {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedEntrega, setSelectedEntrega] = useState<typeof ENTREGAS_MAPA[0] | null>(null);
   const webViewRef = useRef<WebView>(null);
 
   const s = styles(theme, isDark);
@@ -117,7 +155,6 @@ export default function MapsScreen() {
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         setLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
       } catch {
-        // fallback: centro de São Paulo
         setLocation({ lat: -23.5505, lng: -46.6333 });
       }
       setLoading(false);
@@ -125,10 +162,7 @@ export default function MapsScreen() {
   }, []);
 
   const centerOnMe = () => {
-    if (!location || !webViewRef.current) return;
-    webViewRef.current.injectJavaScript(
-      `map.setView([${location.lat}, ${location.lng}], 14); true;`
-    );
+    webViewRef.current?.injectJavaScript('window.centerOnMe(); true;');
   };
 
   if (loading) {
@@ -153,6 +187,7 @@ export default function MapsScreen() {
   }
 
   const mapHtml = buildMapHtml(location!.lat, location!.lng, isDark);
+  const nextEntrega = ENTREGAS_MAPA.find((e) => e.status === 'transito');
 
   return (
     <View style={[s.container, { paddingTop: insets.top }]}>
@@ -188,21 +223,21 @@ export default function MapsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Card inferior — próxima entrega */}
+      {/* Card inferior */}
       <View style={s.infoCard}>
         <View style={s.infoCardLeft}>
-          <Ionicons name="cube" size={20} color={theme.primary} />
+          <View style={[s.statusDot, { backgroundColor: STATUS_COLORS['transito'] }]} />
           <View>
             <Text style={s.infoLabel}>PRÓXIMA PARADA</Text>
             <Text style={s.infoValue}>
-              {ENTREGAS_MAPA.find((e) => e.status === 'transito')?.cliente ?? 'Nenhuma em trânsito'}
+              {nextEntrega?.cliente ?? 'Nenhuma em trânsito'}
             </Text>
           </View>
         </View>
         <View style={s.infoCardRight}>
           <Text style={s.infoEtaLabel}>ETA</Text>
           <Text style={s.infoEtaValue}>
-            {ENTREGAS_MAPA.find((e) => e.status === 'transito')?.eta ?? '—'}
+            {nextEntrega?.eta ?? '—'}
           </Text>
         </View>
       </View>
@@ -271,6 +306,7 @@ const styles = (theme: any, isDark: boolean) =>
       elevation: 2,
     },
     infoCardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+    statusDot: { width: 10, height: 10, borderRadius: 5, marginTop: 2 },
     infoLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: theme.textMuted },
     infoValue: { fontSize: 14, fontWeight: '600', color: theme.textPrimary, marginTop: 2 },
     infoCardRight: { alignItems: 'flex-end' },
