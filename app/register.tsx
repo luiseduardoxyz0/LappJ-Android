@@ -97,6 +97,14 @@ export default function RegisterScreen() {
                 Coordenador
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.toggleButton, perfil === 'dev' && s.toggleButtonActive]}
+              onPress={() => setPerfil('dev' as any)}
+            >
+              <Text style={[s.toggleButtonText, perfil === 'dev' && s.toggleButtonTextActive]}>
+                Dev
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Nome */}

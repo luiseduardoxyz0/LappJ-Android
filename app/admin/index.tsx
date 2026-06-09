@@ -26,7 +26,8 @@ type User = {
   email: string;
   name: string;
   perfil: 'motorista' | 'coordenador' | 'dev';
-  password: string;
+  password?: string;
+  uid?: string;
 };
 
 const PERFIL_COLORS: Record<string, string> = {
@@ -280,7 +281,7 @@ export default function AdminDashboard() {
 
       <FlatList
         data={users}
-        keyExtractor={(u) => u.email}
+        keyExtractor={(u) => u.uid || u.email + Math.random()}
         renderItem={renderUser}
         contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom }]}
         showsVerticalScrollIndicator={false}
