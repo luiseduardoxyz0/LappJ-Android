@@ -55,7 +55,7 @@ export default function AdminDashboard() {
   const loadData = useCallback(async () => {
     setRefreshing(true);
     const [allUsers, session] = await Promise.all([adminGetAllUsers(), getSession()]);
-    setUsers(allUsers);
+    setUsers(allUsers as User[]);
     if (session?.name) setAdminName(session.name);
     setRefreshing(false);
   }, []);
