@@ -25,7 +25,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [perfil, setPerfil] = useState<'motorista' | 'coordenador'>('motorista');
+  const [perfil, setPerfil] = useState<'motorista' | 'coordenador' | 'dev'>('motorista');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
